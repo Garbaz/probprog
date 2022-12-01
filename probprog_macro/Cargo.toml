@@ -7,6 +7,6 @@ edition = "2021"
 proc-macro = true
 
 [dependencies]
-probprog_core = { path = "../core" }
+probprog_core = { path = "../probprog_core" }
 syn = { version = "1.0.103", features = ["full", "extra-traits"]}
 quote = "1.0.21"

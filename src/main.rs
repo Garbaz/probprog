@@ -1,8 +1,13 @@
-use probprog::{prob::{Oracle, ProbFn}, prob};
+use std::marker::PhantomData;
+
+use probprog::{
+    prob,
+    prob::{Oracle, ProbFn},
+};
 use rand::prelude::*;
 use rand_distr::Normal;
 
-struct MyOracle(Normal<f64>);
+/* struct MyOracle(Normal<f64>);
 
 impl MyOracle {
     pub fn new() -> Self {
@@ -14,27 +19,64 @@ impl Oracle<(f64,)> for MyOracle {
     fn divine<R: Rng + ?Sized>(&self, rng: &mut R) -> (f64,) {
         (self.0.sample(rng),)
     }
+} */
+
+trait Distribution<T> {
+    fn sample(&self) -> T;
+    fn trace(&self, result: &T) -> String;
 }
 
-#[prob(y ~ Normal(0, 1), z ~ Bernoulli(0.5))]
-fn test(x : f64) -> f64 {
-    if z {
-        x + y
+struct TwoPoint<T>(T, T)
+where
+    T: Clone;
+
+impl<T> Distribution<T> for TwoPoint<T>
+where
+    T: Clone + std::fmt::Display,
+{
+    fn sample(&self) -> T {
+        let result = if random() {
+            self.0.clone()
+        } else {
+            self.1.clone()
+        };
+        println!("{}", self.trace(&result));
+        result
     }
-    else {
+
+    fn trace(&self, result: &T) -> String {
+        format!("TwoPoint({}, {}) -> {}", self.0, self.1, result)
+    }
+}
+
+#[prob]
+fn test(x: f64) -> f64 {
+    let y = TwoPoint(true, false).sample();
+    if y {
+        x
+    } else {
         0.
     }
 }
 
+
+// fn probfunc(t : ProbfuncTrace, x : f64) {
+//     let 
+// }
+
 fn main() {
-    let mut rng = thread_rng();
+    // let mut rng = thread_rng();
 
-    let pfn = ProbFn {
-        oracle: MyOracle::new(),
-        function: |u: (f64,), o: (f64,)| u.0 + o.0,
-    };
+    // let pfn = ProbFn {
+    //     oracle: MyOracle::new(),
+    //     function: |u: (f64,), o: (f64,)| u.0 + o.0,
+    // };
 
-    for i in -10..11 {
-        println!("{}", pfn.call((i as f64,), &mut rng));
+    // for i in -10..11 {
+    //     println!("{}", pfn.call((i as f64,), &mut rng));
+    // }
+
+    for _ in 0..10 {
+        println!("{}", test(17.29));
     }
 }

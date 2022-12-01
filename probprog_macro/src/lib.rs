@@ -13,12 +13,13 @@ use syn::{
 };
 
 
-
 #[proc_macro_attribute]
 pub fn prob(attrs: TokenStream, input: TokenStream) -> TokenStream {
     // let attrs = Punctuated::<TokenStream, Token![,]>::parse_terminated(attrs);
-    println!("{:#?}", attrs);
-    let ast = parse_macro_input!(input as ItemFn);
+    // println!("{:#?}", attrs);
+    let ast = input.clone();
+    let ast = parse_macro_input!(ast as ItemFn);
     // println!("{:#?}", ast);
-    ast.to_token_stream().into()
+    // ast.to_token_stream().into()
+    input
 }

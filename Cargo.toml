@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-probprog_macro = { path = "macro" }
-probprog_core = { path = "core" }
+probprog_macro = { path = "probprog_macro" }
+probprog_core = { path = "probprog_core" }
 rand = "0.8.5"
 rand_distr = "0.4.3"
