@@ -59,10 +59,23 @@ fn test(x: f64) -> f64 {
     }
 }
 
-
 // fn probfunc(t : ProbfuncTrace, x : f64) {
-//     let 
+//     let
 // }
+
+struct Fun<A, B, F: FnMut(A) -> B> {
+    pub f: F,
+    phantom: PhantomData<(A, B)>,
+}
+
+impl<A, B, F: FnMut(A) -> B> Fun<A, B, F> {
+    fn new(f: F) -> Self {
+        Self {
+            f,
+            phantom: PhantomData,
+        }
+    }
+}
 
 fn main() {
     // let mut rng = thread_rng();
@@ -78,5 +91,14 @@ fn main() {
 
     for _ in 0..10 {
         println!("{}", test(17.29));
+    }
+    let mut i = 0;
+    let mut f = Fun::new(|x| {
+        i += x;
+        i
+    });
+
+    for _ in 0..10 {
+        println!("{}", (f.f)(17));
     }
 }
