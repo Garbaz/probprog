@@ -1,3 +1,5 @@
-# Probabilistic Programming in Rust
+# Prob​_abilistic_ Prog​_gramming_
 
-The code for the bachelor thesis at [Garbaz/bachelor-thesis](https://github.com/Garbaz/bachelor-thesis)
+Embedded probabilistic programming in Rust.
+
+The main repo of the bachelor thesis is at [Garbaz/bachelor-thesis](https://github.com/Garbaz/bachelor-thesis)
