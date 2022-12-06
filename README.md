@@ -1,4 +1,4 @@
-# Prob​_abilistic_ Prog​_gramming_
+# Prob(_abilistic_) Prog(_gramming_)
 
 Embedded probabilistic programming in Rust.
 
