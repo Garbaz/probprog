@@ -1,0 +1,3 @@
+# Because rust-analyzer gets confused sometimes...
+
+killall rust-analyzer; cd probprog_core && cargo clean && cd ../probprog_macro && cargo clean && cd .. && cargo clean

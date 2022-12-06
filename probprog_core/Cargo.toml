@@ -4,4 +4,5 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-syn = { version = "1.0.103", features = ["full", "extra-traits"]}
+rand = "0.8.5"
+rand_distr = "0.4.3"

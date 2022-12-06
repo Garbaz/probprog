@@ -1,4 +1,4 @@
-# Prob(_abilistic_) Prog(_gramming_)
+# **Prob**abilistic **Prog**ramming in Rust
 
 Embedded probabilistic programming in Rust.
 
