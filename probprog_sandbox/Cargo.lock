@@ -54,6 +54,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5b40af805b3121feab8a3c29f04d8ad262fa8e0561883e7653e024ae4479e6de"
 
 [[package]]
+name = "probprog"
+version = "0.1.0"
+dependencies = [
+ "probprog_core",
+ "probprog_macro",
+ "rand",
+ "rand_distr",
+]
+
+[[package]]
 name = "probprog_core"
 version = "0.1.0"
 dependencies = [
@@ -68,6 +78,13 @@ dependencies = [
  "probprog_core",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "probprog_sandbox"
+version = "0.1.0"
+dependencies = [
+ "probprog",
 ]
 
 [[package]]
@@ -130,9 +147,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "1.0.103"
+version = "1.0.105"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a864042229133ada95abf3b54fdc62ef5ccabe9515b64717bcb9a1919e59445d"
+checksum = "60b9b43d45702de4c839cb9b51d9f529c5dd26a4aff255b42b1ebc03e88ee908"
 dependencies = [
  "proc-macro2",
  "quote",
