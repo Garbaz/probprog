@@ -1,1 +1,3 @@
-- 
+- When implementing the macro, test it with "Expand macro recursively"
+- Log-likelihood instead of likelihood
+- Instead of discarding if the parameters are not equal, use and rescore the sample from the trace

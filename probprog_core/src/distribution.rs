@@ -7,8 +7,10 @@ pub trait Distribution {
     fn sample(&self) -> Self::SupportType;
     // fn support(&self) -> Self::SupportType;
     fn params(&self) -> Self::ParamsType;
-    fn trace(&self, current_value: Self::SupportType) -> TraceEntry;
+    fn trace(&self, value: Self::SupportType) -> TraceEntry;
 
-    fn propose(&self, current_value : Self::SupportType) -> (f64, Self::SupportType);
-    // fn propose_likelihood(&self, value : Self::SupportType) -> f64;
+    fn likelihood(&self, value: Self::SupportType) -> f64;
+
+    fn propose(&self, _current_value: Self::SupportType) -> Self::SupportType;
+    fn proposal_likelihood(&self, current_value : Self::SupportType, proposal : Self::SupportType) -> f64;
 }

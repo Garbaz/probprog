@@ -8,5 +8,6 @@ proc-macro = true
 
 [dependencies]
 probprog_core = { path = "../probprog_core" }
+proc-macro2 = "1.0.47"
 syn = { version = "1.0.103", features = ["full", "extra-traits"]}
 quote = "1.0.21"

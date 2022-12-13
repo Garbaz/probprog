@@ -22,6 +22,21 @@ impl TraceEntry {
 }
 
 #[derive(Debug)]
+pub struct TraceConfig {
+    pub database: Database,
+    pub path: String,
+}
+
+impl TraceConfig {
+    pub fn new() -> TraceConfig {
+        TraceConfig {
+            database: Database::new(),
+            path: String::new(),
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct DatabaseEntry {
     pub trace_entry: TraceEntry,
     pub likelihood: f64,

@@ -38,19 +38,26 @@ impl Distribution for Bernoulli {
         self.params
     }
 
-    fn trace(&self, current_value: Self::SupportType) -> TraceEntry {
-        TraceEntry::Bernoulli(self.params(), current_value)
+    fn trace(&self, value: Self::SupportType) -> TraceEntry {
+        TraceEntry::Bernoulli(self.params(), value)
     }
 
-    fn propose(
-        &self,
-        current_value: Self::SupportType,
-    ) -> (f64, Self::SupportType) {
-        let r = self.sample();
-        let p = match r {
+    fn likelihood(&self, value: Self::SupportType) -> f64 {
+        match value {
             true => self.params.p,
             false => 1. - self.params.p,
-        };
-        (p, r)
+        }
+    }
+
+    fn propose(&self, _current_value: Self::SupportType) -> Self::SupportType {
+        self.sample()
+    }
+
+    fn proposal_likelihood(
+        &self,
+        current_value: Self::SupportType,
+        proposal: Self::SupportType,
+    ) -> f64 {
+        self.likelihood(proposal)
     }
 }
