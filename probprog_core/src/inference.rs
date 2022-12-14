@@ -1,14 +1,14 @@
-use crate::trace::{Database, DatabaseEntry, TraceEntry};
+use crate::trace::{Trace, TraceEntry};
 
 #[derive(Debug)]
-pub struct InferenceConfig {
-    pub tracedb: Database,
+pub struct TracingData {
     pub path: String,
-    pub proposal: Option<(String, DatabaseEntry)>,
+    pub trace: Trace,
+    pub proposal: Option<(String, TraceEntry)>,
     // pub proposal_log_likelihood: f64,
 }
 
-impl InferenceConfig {
+impl TracingData {
     // pub fn new(proposal_name : String, proposal: DatabaseEntry) -> Self {
     //     InferenceConfig {
     //         tracedb: Database::new(),
@@ -18,9 +18,9 @@ impl InferenceConfig {
     // }
 
     pub fn new() -> Self {
-        InferenceConfig {
-            tracedb: Database::new(),
+        TracingData {
             path: String::new(),
+            trace: Trace::new(),
             proposal: None,
         }
     }

@@ -2,11 +2,11 @@ use rand::thread_rng;
 use rand_distr as rd;
 
 use crate::{
-    distribution::{DistributionEq, Distribution},
-    trace::TraceEntry,
+    distribution::Distribution,
+    trace::{TraceEntry, TraceValues},
 };
 
-#[derive(Clone,Debug)]
+#[derive(Clone, Debug)]
 pub struct Bernoulli {
     pub dist: rd::Bernoulli,
     pub params: BernoulliParams,
@@ -26,28 +26,9 @@ impl Bernoulli {
     }
 }
 
-impl DistributionEq for Bernoulli {
-    fn eq(&self, other: &impl DistributionEq) -> bool {
-        other.as_any().downcast_ref::<Bernoulli>().is_some()
-    }
-
-    fn params_eq(&self, other : &impl DistributionEq) -> bool {
-        if let Some(other) = other.as_any().downcast_ref::<Bernoulli>() {
-            other.params.p == self.params.p
-        } else {
-            false
-        }
-    }
-
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-}
-
 impl Distribution for Bernoulli {
     type SupportType = bool;
     type ParamsType = BernoulliParams;
-    type SelfComparable = Self;
 
     fn sample(&self) -> Self::SupportType {
         rd::Distribution::sample(&self.dist, &mut thread_rng())
@@ -61,8 +42,16 @@ impl Distribution for Bernoulli {
         self.params
     }
 
-    fn trace(&self, value: Self::SupportType) -> TraceEntry {
-        TraceEntry::Bernoulli(self.params(), value)
+    fn trace(
+        &self,
+        value: Self::SupportType,
+        log_likelihood: f64,
+    ) -> TraceEntry {
+        TraceEntry::Bernoulli(TraceValues {
+            params: self.params,
+            value,
+            log_likelihood,
+        })
     }
 
     fn log_likelihood(&self, value: Self::SupportType) -> f64 {
@@ -82,9 +71,5 @@ impl Distribution for Bernoulli {
         proposal: Self::SupportType,
     ) -> f64 {
         self.log_likelihood(proposal)
-    }
-
-    fn as_comparable(&self) -> &Self::SelfComparable {
-        self
     }
 }
