@@ -32,14 +32,14 @@ fn probfunc(mut tracing_path: String, tracing_data: &mut TracingData) -> u8 {
                 value,
                 log_likelihood,
             })) if *trace_params == params => {
-                todo!()
+                todo!("Handle case where we find the right type and params match")
             }
             Some(TraceEntry::Bernoulli(TraceValues {
                 params: trace_params,
                 value,
                 log_likelihood,
             })) => {
-                todo!("Handle case where we find the right type for the name, but it's the wrong params")
+                todo!("Handle case where we find the right type but params don't match")
             }
             _ => {
                 let distribution = Bernoulli::new(params).unwrap();
