@@ -1,8 +1,12 @@
 use rand::thread_rng;
 use rand_distr as rd;
 
-use crate::{distribution::Distribution, trace::TraceEntry};
+use crate::{
+    distribution::{DistributionEq, Distribution},
+    trace::TraceEntry,
+};
 
+#[derive(Clone,Debug)]
 pub struct Bernoulli {
     pub dist: rd::Bernoulli,
     pub params: BernoulliParams,
@@ -22,9 +26,28 @@ impl Bernoulli {
     }
 }
 
+impl DistributionEq for Bernoulli {
+    fn eq(&self, other: &impl DistributionEq) -> bool {
+        other.as_any().downcast_ref::<Bernoulli>().is_some()
+    }
+
+    fn params_eq(&self, other : &impl DistributionEq) -> bool {
+        if let Some(other) = other.as_any().downcast_ref::<Bernoulli>() {
+            other.params.p == self.params.p
+        } else {
+            false
+        }
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+}
+
 impl Distribution for Bernoulli {
     type SupportType = bool;
     type ParamsType = BernoulliParams;
+    type SelfComparable = Self;
 
     fn sample(&self) -> Self::SupportType {
         rd::Distribution::sample(&self.dist, &mut thread_rng())
@@ -42,22 +65,26 @@ impl Distribution for Bernoulli {
         TraceEntry::Bernoulli(self.params(), value)
     }
 
-    fn likelihood(&self, value: Self::SupportType) -> f64 {
+    fn log_likelihood(&self, value: Self::SupportType) -> f64 {
         match value {
-            true => self.params.p,
-            false => 1. - self.params.p,
+            true => self.params.p.log2(),
+            false => 1. - self.params.p.log2(),
         }
     }
 
-    fn propose(&self, _current_value: Self::SupportType) -> Self::SupportType {
+    fn kernel_propose(&self, _prior: Self::SupportType) -> Self::SupportType {
         self.sample()
     }
 
-    fn proposal_likelihood(
+    fn kernel_log_likelihood(
         &self,
-        current_value: Self::SupportType,
+        _prior: Self::SupportType,
         proposal: Self::SupportType,
     ) -> f64 {
-        self.likelihood(proposal)
+        self.log_likelihood(proposal)
+    }
+
+    fn as_comparable(&self) -> &Self::SelfComparable {
+        self
     }
 }
