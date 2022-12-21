@@ -8,30 +8,37 @@ use crate::{
 
 use rand_distr as rd;
 
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct TracingPath(String);
+
+impl TracingPath {
+    pub fn new() -> Self {
+        TracingPath(String::new())
+    }
+
+    pub fn descend(&mut self, folder: &str) {
+        self.0 += folder;
+        self.0 += "/";
+    }
+
+    pub fn global_name(&self, local_name: &str) -> Self {
+        Self(self.0.clone() + local_name)
+    }
+}
+
 #[derive(Debug)]
 pub struct TracingData {
-    // pub path: String,
-    pub trace: BTreeMap<String, TraceEntry>,
-    pub proposal: Option<(String, TraceEntry)>,
-    pub total_log_likelihood: f64,
-    // pub proposal_log_likelihood: f64,
+    pub trace: BTreeMap<TracingPath, TraceEntry>,
+    pub proposal: Option<(TracingPath, TraceEntry)>,
+    pub trace_log_likelihood: f64,
 }
 
 impl TracingData {
-    // pub fn new(proposal_name : String, proposal: DatabaseEntry) -> Self {
-    //     InferenceConfig {
-    //         tracedb: Database::new(),
-    //         path: String::new(),
-    //         proposal: Some((proposal_name, proposal)),
-    //     }
-    // }
-
     pub fn new() -> Self {
         Self {
-            // path: String::new(),
             trace: BTreeMap::new(),
             proposal: None,
-            total_log_likelihood: 0.,
+            trace_log_likelihood: 0.,
         }
     }
 }
@@ -41,18 +48,18 @@ pub struct MCMCConfig {
     pub burn_in: usize,
 }
 
+/// Sample from the given think with the Markov Chain Monte Carlo algorithm
 pub fn mcmc<F, B>(config: MCMCConfig, prob_thunk: F) -> Vec<B>
 where
-    F: Fn(String, &mut TracingData) -> B,
-    // B: std::cmp::Ord,
+    F: Fn(TracingPath, &mut TracingData) -> B,
 {
     let mut results: Vec<B> = Vec::new();
     let mut tracing_data = TracingData::new(); // Create empty trace
-    prob_thunk(String::new(), &mut tracing_data); // Initialize the trace
+    prob_thunk(TracingPath::new(), &mut tracing_data); // Initialize the trace
     for i in 0..config.samples {
         // Pick a random point in the trace to wiggle
         let wiggle_name = {
-            let names: Vec<&String> = tracing_data.trace.keys().collect();
+            let names: Vec<&TracingPath> = tracing_data.trace.keys().collect();
             let name_sampler = rd::Uniform::new(0, names.len());
             let wiggle_index = rd::Distribution::sample(
                 &name_sampler,
@@ -68,6 +75,7 @@ where
             // log_likelihood: current_ll,
             ..
         }) = tracing_data.trace.get(wiggle_name).unwrap();
+        // ^ We can unwrap here because we know `wiggle_name` is a valid key
 
         let distribution = Bernoulli::new(params).unwrap();
 
@@ -83,12 +91,12 @@ where
             TraceEntry::Bernoulli(proposal_trace_values),
         )); // Temporarily "insert" proposal into trace database
 
-        let previous_total_log_likelihood = tracing_data.total_log_likelihood;
-        tracing_data.total_log_likelihood = 0.;
+        let previous_trace_log_likelihood = tracing_data.trace_log_likelihood;
+        tracing_data.trace_log_likelihood = 0.;
 
         // Run again, this time with the proposal to calculate it's likelihood
         {
-            let r = prob_thunk(String::new(), &mut tracing_data);
+            let r = prob_thunk(TracingPath::new(), &mut tracing_data);
             if i > config.burn_in {
                 results.push(r);
             }
@@ -97,28 +105,25 @@ where
         let (wiggle_name, proposal_database_entry) =
             tracing_data.proposal.take().unwrap();
 
-        // let TraceEntry::Bernoulli(TraceEntryValues {
-        //     log_likelihood: proposal_ll,
-        //     ..
-        // }) = proposal_database_entry;
         let forward_kernel_ll =
             distribution.kernel_log_likelihood(current, proposal);
         let backward_kernel_ll =
             distribution.kernel_log_likelihood(proposal, current);
 
         // The Metropoli-Hastings accept ratio
-        let score = tracing_data.total_log_likelihood
-            - previous_total_log_likelihood
+        let score = tracing_data.trace_log_likelihood
+            - previous_trace_log_likelihood
             + backward_kernel_ll
             - forward_kernel_ll;
 
+        // Stochastically decide whether to accept or reject the proposed change
+        // to our trace
         if score > 0. || rand::random::<f64>().log2() < score {
-            // println!("Accepting proposal!");
             tracing_data
                 .trace
                 .insert(wiggle_name, proposal_database_entry);
         } else {
-            tracing_data.total_log_likelihood = previous_total_log_likelihood;
+            tracing_data.trace_log_likelihood = previous_trace_log_likelihood;
         }
     }
 
