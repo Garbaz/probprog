@@ -1,9 +1,7 @@
-use std::collections::BTreeMap;
-
 use crate::{bernoulli::Bernoulli, distribution::Distribution};
 
 #[derive(Debug)]
-pub struct TraceValues<ParamsType, SupportType> {
+pub struct TraceEntryValues<ParamsType, SupportType> {
     pub params: ParamsType,
     pub value: SupportType,
     pub log_likelihood: f64,
@@ -12,34 +10,45 @@ pub struct TraceValues<ParamsType, SupportType> {
 #[derive(Debug)]
 pub enum TraceEntry {
     Bernoulli(
-        TraceValues<
+        TraceEntryValues<
             <Bernoulli as Distribution>::ParamsType,
             <Bernoulli as Distribution>::SupportType,
         >,
     ),
 }
 
-#[derive(Debug)]
-pub struct Trace {
-    tree: BTreeMap<String, TraceEntry>,
-}
+// pub struct TraceEntry2<ParamsType, SupportType> {
+//     pub dist:
+//         dyn Distribution<ParamsType = ParamsType, SupportType = SupportType>,
+//     pub value: SupportType,
+//     pub log_likelihood: f64,
+// }
 
-impl Trace {
-    pub fn new() -> Self {
-        Self {
-            tree: BTreeMap::new(),
-        }
-    }
+// pub struct Trace2 {
+//     tree: BTreeMap<String, TraceEntry2<_, _>>,
+// }
 
-    pub fn insert(
-        &mut self,
-        key: String,
-        value: TraceEntry,
-    ) -> Option<TraceEntry> {
-        self.tree.insert(key, value)
-    }
+// #[derive(Debug)]
+// pub struct Trace {
+//     tree: BTreeMap<String, TraceEntry>,
+// }
 
-    pub fn get(&self, key: &String) -> Option<&TraceEntry> {
-        self.tree.get(key)
-    }
-}
+// impl Trace {
+//     pub fn new() -> Self {
+//         Self {
+//             tree: BTreeMap::new(),
+//         }
+//     }
+
+//     pub fn insert(
+//         &mut self,
+//         key: String,
+//         value: TraceEntry,
+//     ) -> Option<TraceEntry> {
+//         self.tree.insert(key, value)
+//     }
+
+//     pub fn get(&self, key: &String) -> Option<&TraceEntry> {
+//         self.tree.get(key)
+//     }
+// }

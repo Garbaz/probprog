@@ -3,7 +3,7 @@ use rand_distr as rd;
 
 use crate::{
     distribution::Distribution,
-    trace::{TraceEntry, TraceValues},
+    trace::{TraceEntry, TraceEntryValues},
 };
 
 #[derive(Clone, Debug)]
@@ -26,9 +26,27 @@ impl Bernoulli {
     }
 }
 
+// impl DistributionCmp for Bernoulli {
+//     fn as_any(&self) -> &dyn Any {
+//         self
+//     }
+
+//     fn type_eq(&self, other: &(dyn DistributionCmp)) -> bool {
+//         other.as_any().downcast_ref::<Self>().is_some()
+//     }
+
+//     fn params_eq(&self, other: &(dyn DistributionCmp)) -> bool {
+//         if let Some(other) = other.as_any().downcast_ref::<Self>() {
+//             self.params == other.params
+//         } else {
+//             false
+//         }
+//     }
+// }
+
 impl Distribution for Bernoulli {
-    type SupportType = bool;
     type ParamsType = BernoulliParams;
+    type SupportType = bool;
 
     fn sample(&self) -> Self::SupportType {
         rd::Distribution::sample(&self.dist, &mut thread_rng())
@@ -47,7 +65,7 @@ impl Distribution for Bernoulli {
         value: Self::SupportType,
         log_likelihood: f64,
     ) -> TraceEntry {
-        TraceEntry::Bernoulli(TraceValues {
+        TraceEntry::Bernoulli(TraceEntryValues {
             params: self.params,
             value,
             log_likelihood,
