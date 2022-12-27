@@ -1,6 +1,7 @@
-pub mod trace;
 pub mod distribution;
-pub mod bernoulli;
-pub mod primitives;
+pub mod distributions;
 pub mod inference;
+pub mod primitives;
 pub mod statistics;
+pub mod trace;
+pub mod trace3;

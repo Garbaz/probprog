@@ -1,30 +1,17 @@
-use crate::trace::TraceEntry;
+use std::any::Any;
 
-// pub trait DistributionCmp {
-//     // TODO: Add macro to auto-implement these, or find yet a way for these to be
-//     // default-implemented.
-//     fn as_any(&self) -> &dyn Any;
-//     fn type_eq(&self, other: &(dyn DistributionCmp)) -> bool;
+use crate::trace::PrimitiveDistributionAndValue;
 
-//     // Maybe we should move this method to `Distribution` and make
-//     // this trait a generic `DynamicTypeEq`.
-//     fn params_eq(&self, other: &(dyn DistributionCmp)) -> bool;
-// }
+// use crate::trace::{TraceEntry, TraceEntryDistribution};
 
-pub trait Distribution /* : DistributionCmp */ {
+pub trait Distribution : Clone{
     type ParamsType;
-    type SupportType;
+    type SupportType : Copy;
 
     fn sample(&self) -> Self::SupportType;
-    // fn support(&self) -> Self::SupportType;
     fn params(&self) -> Self::ParamsType;
 
-
-    fn trace(
-        &self,
-        value: Self::SupportType,
-        log_likelihood: f64,
-    ) -> TraceEntry;
+    fn trace(&self, value: Self::SupportType) -> PrimitiveDistributionAndValue;
 
     fn log_likelihood(&self, value: Self::SupportType) -> f64;
 
@@ -34,4 +21,9 @@ pub trait Distribution /* : DistributionCmp */ {
         prior: Self::SupportType,
         proposal: Self::SupportType,
     ) -> f64;
+
+    // fn to_trace_entry(&self, value: Self::SupportType) -> TraceEntry;
+    fn as_any(&self) -> &dyn Any;
+    fn kind_eq(&self, other: &impl Distribution) -> bool;
+    fn params_eq(&self, other: &impl Distribution) -> bool;
 }

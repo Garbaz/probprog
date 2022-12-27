@@ -1,47 +1,9 @@
-use std::collections::BTreeMap;
-
 use crate::{
-    bernoulli::Bernoulli,
     distribution::Distribution,
-    trace::{TraceEntry, TraceEntryValues},
+    trace::{DistributionWithValue, TraceEntry, TracingData, TracingPath},
 };
 
 use rand_distr as rd;
-
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct TracingPath(String);
-
-impl TracingPath {
-    pub fn new() -> Self {
-        TracingPath(String::new())
-    }
-
-    pub fn descend(&mut self, folder: &str) {
-        self.0 += folder;
-        self.0 += "/";
-    }
-
-    pub fn global_name(&self, local_name: &str) -> Self {
-        Self(self.0.clone() + local_name)
-    }
-}
-
-#[derive(Debug)]
-pub struct TracingData {
-    pub trace: BTreeMap<TracingPath, TraceEntry>,
-    pub proposal: Option<(TracingPath, TraceEntry)>,
-    pub trace_log_likelihood: f64,
-}
-
-impl TracingData {
-    pub fn new() -> Self {
-        Self {
-            trace: BTreeMap::new(),
-            proposal: None,
-            trace_log_likelihood: 0.,
-        }
-    }
-}
 
 pub struct MCMCConfig {
     pub samples: usize,
@@ -58,7 +20,7 @@ where
     prob_thunk(TracingPath::new(), &mut tracing_data); // Initialize the trace
     for i in 0..config.samples {
         // Pick a random point in the trace to wiggle
-        let wiggle_name = {
+        let wiggle_path = {
             let names: Vec<&TracingPath> = tracing_data.trace.keys().collect();
             let name_sampler = rd::Uniform::new(0, names.len());
             let wiggle_index = rd::Distribution::sample(
@@ -69,27 +31,34 @@ where
         };
 
         // Look up that point in the initial trace
-        let &TraceEntry::Bernoulli(TraceEntryValues {
-            params,
-            value: current,
-            // log_likelihood: current_ll,
+        let TraceEntry {
+            distribution_and_value,
             ..
-        }) = tracing_data.trace.get(wiggle_name).unwrap();
+        } = tracing_data.trace.get(wiggle_path).unwrap().clone();
         // ^ We can unwrap here because we know `wiggle_name` is a valid key
 
-        let distribution = Bernoulli::new(params).unwrap();
+        let current = distribution_and_value.distribution_and_value().value();
 
         // Generate new proposal for that distribution
-        let proposal = distribution.kernel_propose(current);
-        let proposal_trace_values = TraceEntryValues {
-            params,
-            value: proposal,
-            log_likelihood: 0.,
-        };
+        let proposal = distribution_and_value
+            .distribution_and_value()
+            .kernel_propose(current);
+        // let proposal_trace_values = TraceEntryValues::new(params, proposal, 0.);
+        // tracing_data.proposal = Some((
+        //     wiggle_name.clone(),
+        //     TraceEntry::Bernoulli(proposal_trace_values),
+        // ));
+
         tracing_data.proposal = Some((
-            wiggle_name.clone(),
-            TraceEntry::Bernoulli(proposal_trace_values),
-        )); // Temporarily "insert" proposal into trace database
+            wiggle_path.clone(),
+            TraceEntry {
+                distribution_and_value: distribution_and_value
+                    .distribution_and_value()
+                    .trace(proposal),
+                log_likelihood: 0.,
+            },
+        ));
+        // Temporarily "insert" proposal into trace database
 
         let previous_trace_log_likelihood = tracing_data.trace_log_likelihood;
         tracing_data.trace_log_likelihood = 0.;
@@ -105,10 +74,12 @@ where
         let (wiggle_name, proposal_database_entry) =
             tracing_data.proposal.take().unwrap();
 
-        let forward_kernel_ll =
-            distribution.kernel_log_likelihood(current, proposal);
-        let backward_kernel_ll =
-            distribution.kernel_log_likelihood(proposal, current);
+        let forward_kernel_ll = distribution_and_value
+            .distribution_and_value()
+            .kernel_log_likelihood(current, proposal);
+        let backward_kernel_ll = distribution_and_value
+            .distribution_and_value()
+            .kernel_log_likelihood(proposal, current);
 
         // The Metropoli-Hastings accept ratio
         let score = tracing_data.trace_log_likelihood
