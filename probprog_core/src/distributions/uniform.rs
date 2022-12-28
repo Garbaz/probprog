@@ -43,7 +43,7 @@ impl Distribution for Uniform {
         let b = self.params.1;
         if a < value && value <= b {
             1. / (b - a)
-             //^ this won't crash, since `a < x && x <= b` implies `a < b`
+            //^ this won't crash, since `a < x && x <= b` implies `a < b`
         } else {
             0.
         }

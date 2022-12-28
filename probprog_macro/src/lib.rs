@@ -12,7 +12,6 @@ use syn::{
     Expr, Ident, ItemFn, Stmt, Token,
 };
 
-
 #[proc_macro_attribute]
 pub fn prob(attrs: TokenStream, input: TokenStream) -> TokenStream {
     // let attrs = Punctuated::<TokenStream, Token![,]>::parse_terminated(attrs);
