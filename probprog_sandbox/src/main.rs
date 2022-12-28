@@ -34,7 +34,7 @@ fn probfunc(
             PrimitiveDistribution::Bernoulli(Bernoulli::new(params));
         let name = tracing_path.global_name("x");
         match trace_macro_injection(distribution, name, tracing_data) {
-            PrimitiveSupportType::Bool(result) => result,
+            PrimitiveSupportType::Bernoulli(result) => result,
             _ => unreachable!(),
         }
     };
@@ -47,7 +47,7 @@ fn probfunc(
                 PrimitiveDistribution::Uniform(Uniform::new(params));
             let name = tracing_path.global_name("y");
             match trace_macro_injection(distribution, name, tracing_data) {
-                PrimitiveSupportType::F64(result) => result, // How do we do this part in the macro?
+                PrimitiveSupportType::Uniform(result) => result, // How do we do this part in the macro?
                 _ => unreachable!(),
             }
         };
@@ -60,7 +60,7 @@ fn probfunc(
                 PrimitiveDistribution::Uniform(Uniform::new(params));
             let name = tracing_path.global_name("y");
             match trace_macro_injection(distribution, name, tracing_data) {
-                PrimitiveSupportType::F64(result) => result, // How do we do this part in the macro?
+                PrimitiveSupportType::Uniform(result) => result,
                 _ => unreachable!(),
             }
         };

@@ -53,14 +53,13 @@ pub struct TraceEntry {
 #[derive(Debug, Clone, PartialEq)]
 pub enum PrimitiveParamsType {
     Bernoulli(BernoulliParams),
-    Uniform01(UniformParams),
+    Uniform(UniformParams),
 }
 
 #[derive(Debug, Clone, Copy)]
 pub enum PrimitiveSupportType {
-    None,
-    Bool(bool),
-    F64(f64),
+    Bernoulli(bool),
+    Uniform(f64),
 }
 
 #[derive(Debug, Clone)]
@@ -92,10 +91,10 @@ impl Distribution for PrimitiveDistribution {
     fn sample(&self) -> Self::SupportType {
         match self {
             PrimitiveDistribution::Bernoulli(d) => {
-                PrimitiveSupportType::Bool(d.sample())
+                PrimitiveSupportType::Bernoulli(d.sample())
             }
             PrimitiveDistribution::Uniform(d) => {
-                PrimitiveSupportType::F64(d.sample())
+                PrimitiveSupportType::Uniform(d.sample())
             }
         }
     }
@@ -106,7 +105,7 @@ impl Distribution for PrimitiveDistribution {
                 PrimitiveParamsType::Bernoulli(d.params())
             }
             PrimitiveDistribution::Uniform(d) => {
-                PrimitiveParamsType::Uniform01(d.params())
+                PrimitiveParamsType::Uniform(d.params())
             }
         }
     }
@@ -115,13 +114,13 @@ impl Distribution for PrimitiveDistribution {
         match (self, value) {
             (
                 PrimitiveDistribution::Bernoulli(d),
-                PrimitiveSupportType::Bool(value),
+                PrimitiveSupportType::Bernoulli(value),
             ) => d.log_likelihood(value),
             (
                 PrimitiveDistribution::Uniform(d),
-                PrimitiveSupportType::F64(value),
+                PrimitiveSupportType::Uniform(value),
             ) => d.log_likelihood(value),
-            _ => f64::NAN,
+            _ => unreachable!(),
         }
     }
 
@@ -129,13 +128,13 @@ impl Distribution for PrimitiveDistribution {
         match (self, prior) {
             (
                 PrimitiveDistribution::Bernoulli(d),
-                PrimitiveSupportType::Bool(prior),
-            ) => PrimitiveSupportType::Bool(d.kernel_propose(prior)),
+                PrimitiveSupportType::Bernoulli(prior),
+            ) => PrimitiveSupportType::Bernoulli(d.kernel_propose(prior)),
             (
                 PrimitiveDistribution::Uniform(d),
-                PrimitiveSupportType::F64(prior),
-            ) => PrimitiveSupportType::F64(d.kernel_propose(prior)),
-            _ => PrimitiveSupportType::None,
+                PrimitiveSupportType::Uniform(prior),
+            ) => PrimitiveSupportType::Uniform(d.kernel_propose(prior)),
+            _ => unreachable!(),
         }
     }
 
@@ -147,15 +146,15 @@ impl Distribution for PrimitiveDistribution {
         match (self, prior, proposal) {
             (
                 PrimitiveDistribution::Bernoulli(d),
-                PrimitiveSupportType::Bool(prior),
-                PrimitiveSupportType::Bool(proposal),
+                PrimitiveSupportType::Bernoulli(prior),
+                PrimitiveSupportType::Bernoulli(proposal),
             ) => d.kernel_log_likelihood(prior, proposal),
             (
                 PrimitiveDistribution::Uniform(d),
-                PrimitiveSupportType::F64(prior),
-                PrimitiveSupportType::F64(proposal),
+                PrimitiveSupportType::Uniform(prior),
+                PrimitiveSupportType::Uniform(proposal),
             ) => d.kernel_log_likelihood(prior, proposal),
-            _ => f64::NAN,
+            _ => unreachable!(),
         }
     }
 }
