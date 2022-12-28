@@ -2,14 +2,21 @@
 //! probabilistic functions. They can be used as ordinary functions anywhere,
 //! but if used in a function annotated with `#[prob]`, they will be treated
 //! specially to allow for efficient inference.
+//! This means that the bodies of the functions here are only relevant if they
+//! are used _outside_ a `prob` function.
 
 use crate::{
     distribution::Distribution,
-    distributions::bernoulli::{Bernoulli, BernoulliParams},
+    distributions::{
+        bernoulli::{Bernoulli, BernoulliParams},
+        uniform::{Uniform, UniformParams},
+    },
 };
 
 pub fn bernoulli(p: f64) -> bool {
-    // This body is only relevant if this function is used as _outside_ a `prob` function.
-    let d = Bernoulli::new(BernoulliParams(p));
-    return d.sample();
+    Bernoulli::new(BernoulliParams(p)).sample()
+}
+
+pub fn uniform(a: f64, b: f64) -> f64 {
+    Uniform::new(UniformParams(a, b)).sample()
 }

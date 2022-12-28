@@ -1,12 +1,7 @@
-use std::any::Any;
-
 use rand::thread_rng;
 use rand_distr as rd;
 
-use crate::{
-    distribution::Distribution, trace::{DistributionAndValue, PrimitiveDistributionAndValue},
-    // trace::{TraceEntry, TraceEntryDistribution, TraceEntryValues},
-};
+use crate::distribution::Distribution;
 
 #[derive(Clone, Debug)]
 pub struct Bernoulli {
@@ -56,9 +51,9 @@ impl Distribution for Bernoulli {
         self.params
     }
 
-    fn trace(&self, value: Self::SupportType) -> PrimitiveDistributionAndValue {
-        PrimitiveDistributionAndValue::Bernoulli(DistributionAndValue { distribution: self.clone(), value })
-    }
+    // fn trace(&self, value: Self::SupportType) -> PrimitiveDistributionAndValue {
+    //     PrimitiveDistributionAndValue::Bernoulli(DistributionAndValue { distribution: self.clone(), value })
+    // }
 
     fn log_likelihood(&self, value: Self::SupportType) -> f64 {
         match value {
@@ -87,19 +82,19 @@ impl Distribution for Bernoulli {
     //     ))
     // }
 
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
+    // fn as_any(&self) -> &dyn Any {
+    //     self
+    // }
 
-    fn kind_eq(&self, other: &impl Distribution) -> bool {
-        other.as_any().downcast_ref::<Self>().is_some()
-    }
+    // fn kind_eq(&self, other: &impl Distribution) -> bool {
+    //     other.as_any().downcast_ref::<Self>().is_some()
+    // }
 
-    fn params_eq(&self, other: &impl Distribution) -> bool {
-        if let Some(other) = other.as_any().downcast_ref::<Self>() {
-            self.params == other.params
-        } else {
-            false
-        }
-    }
+    // fn params_eq(&self, other: &impl Distribution) -> bool {
+    //     if let Some(other) = other.as_any().downcast_ref::<Self>() {
+    //         self.params == other.params
+    //     } else {
+    //         false
+    //     }
+    // }
 }

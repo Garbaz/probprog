@@ -2,6 +2,6 @@ pub mod distribution;
 pub mod distributions;
 pub mod inference;
 pub mod primitives;
-pub mod statistics;
+pub mod stats;
 pub mod trace;
-pub mod trace3;
+pub mod macro_injection;

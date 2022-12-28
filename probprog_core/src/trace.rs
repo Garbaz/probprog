@@ -1,8 +1,11 @@
-use std::{any::Any, collections::BTreeMap};
+use std::collections::BTreeMap;
 
 use crate::{
     distribution::Distribution,
-    distributions::{bernoulli::Bernoulli, uniform::Uniform01},
+    distributions::{
+        bernoulli::{Bernoulli, BernoulliParams},
+        uniform::{Uniform, UniformParams},
+    },
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -41,60 +44,99 @@ impl TracingData {
 }
 
 #[derive(Debug, Clone)]
-pub enum PrimitiveDistributionAndValue {
-    Bernoulli(DistributionAndValue<Bernoulli>),
-    // Uniform01(DistributionAndValue<Uniform01>),
+pub struct TraceEntry {
+    pub distribution: PrimitiveDistribution,
+    pub value: PrimitiveSupportType,
+    pub log_likelihood: f64,
 }
 
-impl PrimitiveDistributionAndValue {
-    pub fn distribution_and_value(&self) -> &impl DistributionWithValue {
-        match self {
-            PrimitiveDistributionAndValue::Bernoulli(dav) => dav,
-            // PrimitiveDistributionAndValue::Uniform01(dav) => dav,
-        }
-        // if let PrimitiveDistributionAndValue::Bernoulli(dav) = self {
-        //     return dav.clone();
-        // }
-        // if let PrimitiveDistributionAndValue::Uniform01(dav) = self {
-        //     return dav.clone();
-        // }
-        // unreachable!()
-    }
+#[derive(Debug, Clone, PartialEq)]
+pub enum PrimitiveParamsType {
+    Bernoulli(BernoulliParams),
+    Uniform01(UniformParams),
 }
 
-pub trait DistributionWithValue: Distribution {
-    fn value(&self) -> Self::SupportType;
+#[derive(Debug, Clone, Copy)]
+pub enum PrimitiveSupportType {
+    None,
+    Bool(bool),
+    F64(f64),
 }
 
 #[derive(Debug, Clone)]
-pub struct DistributionAndValue<D: Distribution> {
-    pub distribution: D,
-    pub value: D::SupportType,
+pub enum PrimitiveDistribution {
+    Bernoulli(Bernoulli),
+    Uniform(Uniform),
 }
 
-impl<D: Distribution + 'static> Distribution for DistributionAndValue<D> {
-    type ParamsType = D::ParamsType;
+impl PrimitiveDistribution {
+    pub fn kind_eq(&self, other: &PrimitiveDistribution) -> bool {
+        match (self, other) {
+            (
+                PrimitiveDistribution::Bernoulli(_),
+                PrimitiveDistribution::Bernoulli(_),
+            ) => true,
+            (
+                PrimitiveDistribution::Uniform(_),
+                PrimitiveDistribution::Uniform(_),
+            ) => true,
+            _ => false,
+        }
+    }
+}
 
-    type SupportType = D::SupportType;
+impl Distribution for PrimitiveDistribution {
+    type ParamsType = PrimitiveParamsType;
+    type SupportType = PrimitiveSupportType;
 
     fn sample(&self) -> Self::SupportType {
-        self.distribution.sample()
+        match self {
+            PrimitiveDistribution::Bernoulli(d) => {
+                PrimitiveSupportType::Bool(d.sample())
+            }
+            PrimitiveDistribution::Uniform(d) => {
+                PrimitiveSupportType::F64(d.sample())
+            }
+        }
     }
 
     fn params(&self) -> Self::ParamsType {
-        self.distribution.params()
-    }
-
-    fn trace(&self, value: Self::SupportType) -> PrimitiveDistributionAndValue {
-        self.distribution.trace(value)
+        match self {
+            PrimitiveDistribution::Bernoulli(d) => {
+                PrimitiveParamsType::Bernoulli(d.params())
+            }
+            PrimitiveDistribution::Uniform(d) => {
+                PrimitiveParamsType::Uniform01(d.params())
+            }
+        }
     }
 
     fn log_likelihood(&self, value: Self::SupportType) -> f64 {
-        self.distribution.log_likelihood(value)
+        match (self, value) {
+            (
+                PrimitiveDistribution::Bernoulli(d),
+                PrimitiveSupportType::Bool(value),
+            ) => d.log_likelihood(value),
+            (
+                PrimitiveDistribution::Uniform(d),
+                PrimitiveSupportType::F64(value),
+            ) => d.log_likelihood(value),
+            _ => f64::NAN,
+        }
     }
 
     fn kernel_propose(&self, prior: Self::SupportType) -> Self::SupportType {
-        self.distribution.kernel_propose(prior)
+        match (self, prior) {
+            (
+                PrimitiveDistribution::Bernoulli(d),
+                PrimitiveSupportType::Bool(prior),
+            ) => PrimitiveSupportType::Bool(d.kernel_propose(prior)),
+            (
+                PrimitiveDistribution::Uniform(d),
+                PrimitiveSupportType::F64(prior),
+            ) => PrimitiveSupportType::F64(d.kernel_propose(prior)),
+            _ => PrimitiveSupportType::None,
+        }
     }
 
     fn kernel_log_likelihood(
@@ -102,32 +144,18 @@ impl<D: Distribution + 'static> Distribution for DistributionAndValue<D> {
         prior: Self::SupportType,
         proposal: Self::SupportType,
     ) -> f64 {
-        self.distribution.kernel_log_likelihood(prior, proposal)
+        match (self, prior, proposal) {
+            (
+                PrimitiveDistribution::Bernoulli(d),
+                PrimitiveSupportType::Bool(prior),
+                PrimitiveSupportType::Bool(proposal),
+            ) => d.kernel_log_likelihood(prior, proposal),
+            (
+                PrimitiveDistribution::Uniform(d),
+                PrimitiveSupportType::F64(prior),
+                PrimitiveSupportType::F64(proposal),
+            ) => d.kernel_log_likelihood(prior, proposal),
+            _ => f64::NAN,
+        }
     }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn kind_eq(&self, other: &impl Distribution) -> bool {
-        self.distribution.kind_eq(other)
-    }
-
-    fn params_eq(&self, other: &impl Distribution) -> bool {
-        self.distribution.params_eq(other)
-    }
-}
-
-impl<D: Distribution + 'static> DistributionWithValue
-    for DistributionAndValue<D>
-{
-    fn value(&self) -> Self::SupportType {
-        self.value
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct TraceEntry {
-    pub distribution_and_value: PrimitiveDistributionAndValue,
-    pub log_likelihood: f64,
 }

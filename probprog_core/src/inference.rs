@@ -1,6 +1,6 @@
 use crate::{
     distribution::Distribution,
-    trace::{DistributionWithValue, TraceEntry, TracingData, TracingPath},
+    trace::{TraceEntry, TracingData, TracingPath},
 };
 
 use rand_distr as rd;
@@ -32,29 +32,20 @@ where
 
         // Look up that point in the initial trace
         let TraceEntry {
-            distribution_and_value,
+            distribution,
+            value: current,
             ..
         } = tracing_data.trace.get(wiggle_path).unwrap().clone();
         // ^ We can unwrap here because we know `wiggle_name` is a valid key
 
-        let current = distribution_and_value.distribution_and_value().value();
-
         // Generate new proposal for that distribution
-        let proposal = distribution_and_value
-            .distribution_and_value()
-            .kernel_propose(current);
-        // let proposal_trace_values = TraceEntryValues::new(params, proposal, 0.);
-        // tracing_data.proposal = Some((
-        //     wiggle_name.clone(),
-        //     TraceEntry::Bernoulli(proposal_trace_values),
-        // ));
+        let proposal = distribution.kernel_propose(current);
 
         tracing_data.proposal = Some((
             wiggle_path.clone(),
             TraceEntry {
-                distribution_and_value: distribution_and_value
-                    .distribution_and_value()
-                    .trace(proposal),
+                distribution: distribution.clone(),
+                value: proposal,
                 log_likelihood: 0.,
             },
         ));
@@ -74,12 +65,10 @@ where
         let (wiggle_name, proposal_database_entry) =
             tracing_data.proposal.take().unwrap();
 
-        let forward_kernel_ll = distribution_and_value
-            .distribution_and_value()
-            .kernel_log_likelihood(current, proposal);
-        let backward_kernel_ll = distribution_and_value
-            .distribution_and_value()
-            .kernel_log_likelihood(proposal, current);
+        let forward_kernel_ll =
+            distribution.kernel_log_likelihood(current, proposal);
+        let backward_kernel_ll =
+            distribution.kernel_log_likelihood(proposal, current);
 
         // The Metropoli-Hastings accept ratio
         let score = tracing_data.trace_log_likelihood
@@ -100,3 +89,4 @@ where
 
     results
 }
+

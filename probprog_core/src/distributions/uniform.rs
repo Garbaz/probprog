@@ -1,50 +1,32 @@
-use std::any::Any;
-
 use rand::thread_rng;
 use rand_distr as rd;
 
-use crate::{
-    distribution::Distribution, trace::{DistributionAndValue, PrimitiveDistributionAndValue},
-    // trace::{TraceEntry, TraceEntryDistribution, TraceEntryValues},
-};
+use crate::distribution::Distribution;
 
 #[derive(Clone, Debug)]
-pub struct Uniform01 {
-    pub dist: rd::OpenClosed01,
+pub struct Uniform {
+    pub dist: rd::Uniform<f64>,
     pub params: UniformParams,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct UniformParams();
+pub struct UniformParams(pub f64, pub f64);
 
-impl Uniform01 {
+impl Uniform {
     pub fn new(params: UniformParams) -> Self {
-        Uniform01 {
-            dist: rd::OpenClosed01,
+        // Ensuring that a <= b
+        let params =
+            UniformParams(params.0.min(params.1), params.0.max(params.1));
+        let a = params.0;
+        let b = params.1;
+        Uniform {
+            dist: rd::Uniform::new(a, b),
             params,
         }
     }
 }
 
-// impl DistributionCmp for Uniform {
-//     fn as_any(&self) -> &dyn Any {
-//         self
-//     }
-
-//     fn type_eq(&self, other: &(dyn DistributionCmp)) -> bool {
-//         other.as_any().downcast_ref::<Self>().is_some()
-//     }
-
-//     fn params_eq(&self, other: &(dyn DistributionCmp)) -> bool {
-//         if let Some(other) = other.as_any().downcast_ref::<Self>() {
-//             self.params == other.params
-//         } else {
-//             false
-//         }
-//     }
-// }
-
-impl Distribution for Uniform01 {
+impl Distribution for Uniform {
     type ParamsType = UniformParams;
     type SupportType = f64;
 
@@ -56,21 +38,19 @@ impl Distribution for Uniform01 {
         self.params
     }
 
-    fn trace(&self, value: Self::SupportType) -> PrimitiveDistributionAndValue {
-        // PrimitiveDistributionAndValue::Uniform01(DistributionAndValue { distribution: self.clone(), value })
-        todo!()
-    }
-
     fn log_likelihood(&self, value: Self::SupportType) -> f64 {
-        // match value {
-        //     true => self.params.0.log2(),
-        //     false => 1. - self.params.0.log2(),
-        // }
-        todo!("The log likelihood of uniform...")
+        let a = self.params.0;
+        let b = self.params.1;
+        if a < value && value <= b {
+            1. / (b - a)
+             //^ this won't crash, since `a < x && x <= b` implies `a < b`
+        } else {
+            0.
+        }
     }
 
     fn kernel_propose(&self, _prior: Self::SupportType) -> Self::SupportType {
-        self.sample()
+        self.sample() // TODO: Is there a better proposal function?
     }
 
     fn kernel_log_likelihood(
@@ -79,29 +59,5 @@ impl Distribution for Uniform01 {
         proposal: Self::SupportType,
     ) -> f64 {
         self.log_likelihood(proposal)
-    }
-
-    // fn to_trace_entry(&self, value: Self::SupportType) -> TraceEntry {
-    //     TraceEntry::Uniform(TraceEntryValues::new(
-    //         self.params,
-    //         value,
-    //         self.log_likelihood(value),
-    //     ))
-    // }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn kind_eq(&self, other: &impl Distribution) -> bool {
-        other.as_any().downcast_ref::<Self>().is_some()
-    }
-
-    fn params_eq(&self, other: &impl Distribution) -> bool {
-        if let Some(other) = other.as_any().downcast_ref::<Self>() {
-            self.params == other.params
-        } else {
-            false
-        }
     }
 }
