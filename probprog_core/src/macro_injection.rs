@@ -8,14 +8,14 @@ use crate::{
 
 pub fn trace_macro_injection(
     distribution: PrimitiveDistribution,
-    name: TracingPath,
+    tracing_path: &TracingPath,
     tracing_data: &mut TracingData,
 ) -> PrimitiveSupportType {
     let database_entry = match &tracing_data.proposal {
         // If there is a proposal, and it is for us, take it
-        Some((n, entry)) if *n == name => Some(entry),
+        Some((n, entry)) if n == tracing_path => Some(entry),
         // Otherwise, try looking in the trace for our entry
-        _ => tracing_data.trace.get(&name),
+        _ => tracing_data.trace.get(&tracing_path),
     };
     match database_entry {
         Some(trace_entry)
@@ -38,7 +38,7 @@ pub fn trace_macro_injection(
             let value = trace_entry.value;
             let log_likelihood = distribution.log_likelihood(value);
             tracing_data.trace.insert(
-                name,
+                tracing_path.clone(),
                 TraceEntry {
                     distribution: distribution.clone(),
                     value,
@@ -61,7 +61,7 @@ pub fn trace_macro_injection(
                 value,
                 log_likelihood,
             };
-            tracing_data.trace.insert(name, trace_entry);
+            tracing_data.trace.insert(tracing_path.clone(), trace_entry);
             tracing_data.trace_log_likelihood += log_likelihood;
             value
         }

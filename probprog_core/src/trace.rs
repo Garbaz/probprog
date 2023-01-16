@@ -9,20 +9,26 @@ use crate::{
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct TracingPath(String);
+pub enum TracingPathEntry {
+    Loop(u64),
+    Function(String),
+    Recursion,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct TracingPath(Vec<TracingPathEntry>);
 
 impl TracingPath {
     pub fn new() -> Self {
-        TracingPath(String::new())
+        TracingPath(Vec::new())
     }
 
-    pub fn descend(&mut self, folder: &str) {
-        self.0 += folder;
-        self.0 += "/";
+    pub fn descend(&mut self, folder: TracingPathEntry) {
+        self.0.push(folder);
     }
 
-    pub fn global_name(&self, local_name: &str) -> Self {
-        Self(self.0.clone() + local_name)
+    pub fn ascend(&mut self) -> Option<TracingPathEntry> {
+        self.0.pop()
     }
 }
 

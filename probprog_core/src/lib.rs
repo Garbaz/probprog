@@ -5,3 +5,4 @@ pub mod macro_injection;
 pub mod primitives;
 pub mod stats;
 pub mod trace;
+pub mod probfunc;

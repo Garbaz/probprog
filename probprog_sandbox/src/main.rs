@@ -1,13 +1,19 @@
 use probprog::{
+    distribution::Distribution,
     distributions::{
         bernoulli::{Bernoulli, BernoulliParams},
         uniform::{Uniform, UniformParams},
     },
     inference::{mcmc, MCMCConfig},
     macro_injection::trace_macro_injection,
+    primitives::{bernoulli, uniform},
+    prob,
+    probfunc::ProbFunc,
+    sample,
     stats::{statistics::densities, visualization::simple_bar_graph},
     trace::{
         PrimitiveDistribution, PrimitiveSupportType, TracingData, TracingPath,
+        TracingPathEntry,
     },
 };
 
@@ -16,62 +22,51 @@ use probprog::{
 /// Note: We should extract as much as possible from the function itself
 /// into pre-written functions, such that the macro shenanigans are kept
 /// at a minimum.
-fn probfunc(
-    mut tracing_path: TracingPath,
-    tracing_data: &mut TracingData,
-) -> f64 {
-    {
-        /* PROB MACRO CODE */
-        tracing_path.descend("probfunc");
-    }
-
-    // USER CODE USER CODE USER CODE
-
-    let x = {
-        /* PROB MACRO CODE (Replaced `bernoulli(0.25)`) */
-        let params = BernoulliParams(0.25);
-        let distribution =
-            PrimitiveDistribution::Bernoulli(Bernoulli::new(params));
-        let name = tracing_path.global_name("x");
-        match trace_macro_injection(distribution, name, tracing_data) {
-            PrimitiveSupportType::Bernoulli(result) => result,
-            _ => unreachable!(),
-        }
-    };
-
-    if x {
-        let y = {
-            /* PROB MACRO CODE (Replaced `uniform(-2., -1.)`) */
-            let params = UniformParams(-2., -1.);
-            let distribution =
-                PrimitiveDistribution::Uniform(Uniform::new(params));
-            let name = tracing_path.global_name("y");
-            match trace_macro_injection(distribution, name, tracing_data) {
-                PrimitiveSupportType::Uniform(result) => result, // How do we do this part in the macro?
-                _ => unreachable!(),
+fn testfunc() -> ProbFunc<f64, impl Fn(TracingPath, &mut TracingData) -> f64>
+{
+    ProbFunc::new(
+        move |mut tracing_path: TracingPath, tracing_data: &mut TracingData| {
+            {
+                /* PROB MACRO CODE */
+                tracing_path.descend(TracingPathEntry::Function(
+                    "testfunc".to_string(),
+                ));
             }
-        };
-        y
-    } else {
-        let y = {
-            /* PROB MACRO CODE (Replaced `uniform(-2., -1.)`) */
-            let params = UniformParams(1., 2.);
-            let distribution =
-                PrimitiveDistribution::Uniform(Uniform::new(params));
-            let name = tracing_path.global_name("y");
-            match trace_macro_injection(distribution, name, tracing_data) {
-                PrimitiveSupportType::Uniform(result) => result,
-                _ => unreachable!(),
+
+            // USER CODE USER CODE USER CODE
+
+            let x = sample!(bernoulli(0.25));
+
+            if x {
+                let y = sample!(uniform(-2., -1.));
+                y
+            } else {
+                let y = sample!(uniform(1., 2.));
+                y
             }
-        };
-        y
-    }
+        },
+    )
 }
+
+#[prob]
+fn testfunc2(p : f64) -> bool {
+    true
+}
+
+// #[prob]
+// fn probfunc2(x: f64, y: f64) -> f64 {
+//     let r = bernoulli(0.33).sample();
+//     if r {
+//         x
+//     } else {
+//         y
+//     }
+// }
 
 fn main() {
     let samples = 100000;
     let burn_in = samples / 4;
-    let results = mcmc(MCMCConfig { samples, burn_in }, &probfunc);
+    let results = mcmc(MCMCConfig { samples, burn_in }, &mut testfunc());
     // println!("{:#?}",tracing_data);
     // println!("{:?}", results);
     let results = results.into_iter()/* .map(|x| OrderedFloat(x)) */;
@@ -80,7 +75,7 @@ fn main() {
     // let results = normalize_map(results);
     // println!("{:?}", results);
     // println!("{:?}", results);
-    let results = densities(-2.5..2.5, 80, results);
+    let results = densities(-2.5..2.5, 60, results);
     // println!("{:?}", results);
     println!("{}", simple_bar_graph(16, &results));
 

@@ -45,12 +45,12 @@ fn test(x: f64) -> f64 {
     }
 }
 
-struct Fun<A, B, F: FnMut(A) -> B> {
+struct Fun<A, B, F: Fn(A) -> B> {
     pub f: F,
     phantom: PhantomData<(A, B)>,
 }
 
-impl<A, B, F: FnMut(A) -> B> Fun<A, B, F> {
+impl<A, B, F: Fn(A) -> B> Fun<A, B, F> {
     fn new(f: F) -> Self {
         Self {
             f,
