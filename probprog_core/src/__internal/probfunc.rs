@@ -1,25 +1,25 @@
-use crate::trace::{TracingData, TracingPath};
+use crate::__internal::trace::{TracingData, TracingPathRec};
 
 pub struct ProbFunc<T, F>(pub(crate) F)
 where
-    F: Fn(TracingPath, &mut TracingData) -> T;
+    F: Fn(&mut TracingPathRec, &mut TracingData) -> T;
 
 impl<T, F> ProbFunc<T, F>
 where
-    F: Fn(TracingPath, &mut TracingData) -> T,
+    F: Fn(&mut TracingPathRec, &mut TracingData) -> T,
 {
     pub fn new(prob_func: F) -> Self {
         Self(prob_func)
     }
 }
 
-pub fn __internal_traced_sample<T, F>(
+pub fn traced_sample<T, F>(
     prob_func: &mut ProbFunc<T, F>,
-    tracing_path: TracingPath,
+    tracing_path: &mut TracingPathRec,
     tracing_data: &mut TracingData,
 ) -> T
 where
-    F: Fn(TracingPath, &mut TracingData) -> T,
+    F: Fn(&mut TracingPathRec, &mut TracingData) -> T,
 {
     (prob_func.0)(tracing_path, tracing_data)
 }

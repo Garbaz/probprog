@@ -1,14 +1,14 @@
 extern crate proc_macro;
 
 use proc_macro as pm;
-use proc_macro2::{Group, Ident, Span, TokenStream, TokenTree};
+use proc_macro2::{Span, TokenStream};
 use quote::{quote, ToTokens};
 use syn::{
-    self, parse_macro_input, Block, ExprCall, ItemFn, ReturnType, Token, Type,
+    self, parse_macro_input, Block, ItemFn, ReturnType, Token, Type,
 };
 
 #[proc_macro_attribute]
-pub fn prob(attrs: pm::TokenStream, input: pm::TokenStream) -> pm::TokenStream {
+pub fn prob(_attrs: pm::TokenStream, input: pm::TokenStream) -> pm::TokenStream {
     // let input = TokenStream::from(input);
     let code = input.clone();
     // println!("{:#?}", code);
@@ -30,29 +30,32 @@ pub fn prob(attrs: pm::TokenStream, input: pm::TokenStream) -> pm::TokenStream {
     // println!("{}", orig_func_output.to_token_stream().to_string());
 
     let new_func_output = quote! {
-        ProbFunc<(#orig_func_output), impl Fn(TracingPath, &mut TracingData) -> (#orig_func_output)>
+        ::probprog::__internal::probfunc::ProbFunc<(#orig_func_output),
+                 impl Fn(&mut ::probprog::__internal::trace::TracingPathRec,
+                         &mut ::probprog::__internal::trace::TracingData) -> (#orig_func_output)>
     }.into();
 
     // println!("{}", new_func_output.to_string());
 
-    let q = parse_macro_input!(new_func_output as Type);
+    let new_func_output = parse_macro_input!(new_func_output as Type);
 
-    func.sig.output = ReturnType::Type(rarrow, Box::new(q));
+    func.sig.output = ReturnType::Type(rarrow, Box::new(new_func_output));
 
     // println!("{}", func.to_token_stream().to_string());
 
     let old_func_block = func.block.into_token_stream();
     let new_func_block = quote! {
         {
-            ProbFunc::new(
-                move |mut tracing_path: TracingPath, tracing_data: &mut TracingData|
+            ::probprog::__internal::probfunc::ProbFunc::new(
+                move | __probprog_tracing_path: &mut ::probprog::__internal::trace::TracingPathRec,
+                       __probprog_tracing_data: &mut ::probprog::__internal::trace::TracingData |
                     #old_func_block
             )
         }
     }
     .into();
-    let r = parse_macro_input!(new_func_block as Block);
-    func.block = Box::new(r);
+    let new_func_block = parse_macro_input!(new_func_block as Block);
+    func.block = Box::new(new_func_block);
 
     // println!("{}", func.to_token_stream().to_string());
 
@@ -91,10 +94,10 @@ pub fn sample(input: pm::TokenStream) -> pm::TokenStream {
     //    let code = input.clone();
 
     let output = quote! {
-        ::probprog::probfunc::__internal_traced_sample(
+        ::probprog::__internal::probfunc::traced_sample(
             &mut (#input),
-            tracing_path.clone(),
-            tracing_data,
+            &mut __probprog_tracing_path,
+            __probprog_tracing_data,
         )
     };
 

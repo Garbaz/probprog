@@ -7,31 +7,28 @@
 //! probabilistic functions in IDEs, i.e. for auto-complete & co
 
 use crate::{
+    __internal::probfunc::ProbFunc,
+    __internal::trace::{
+        PrimitiveDistribution, PrimitiveSupportType, TracingData,
+        TracingPathRec, TraceEntry,
+    },
     distributions::{
         bernoulli::{Bernoulli, BernoulliParams},
         uniform::{Uniform, UniformParams},
-    },
-    macro_injection::trace_macro_injection,
-    probfunc::ProbFunc,
-    trace::{
-        PrimitiveDistribution, PrimitiveSupportType, TracingData, TracingPath,
-    },
+    }, distribution::Distribution,
 };
 
 pub fn bernoulli(
     p: f64,
-) -> ProbFunc<bool, impl Fn(TracingPath, &mut TracingData) -> bool> {
+) -> ProbFunc<bool, impl Fn(&mut TracingPathRec, &mut TracingData) -> bool> {
     ProbFunc(
-        move |tracing_path: TracingPath, tracing_data: &mut TracingData| {
+        move |tracing_path: &mut TracingPathRec,
+              tracing_data: &mut TracingData| {
             let params = BernoulliParams(p);
             let distribution =
                 PrimitiveDistribution::Bernoulli(Bernoulli::new(params));
 
-            match trace_macro_injection(
-                distribution,
-                &tracing_path,
-                tracing_data,
-            ) {
+            match primitive_trace(distribution, tracing_path, tracing_data) {
                 PrimitiveSupportType::Bernoulli(result) => result,
                 _ => unreachable!(),
             }
@@ -42,21 +39,83 @@ pub fn bernoulli(
 pub fn uniform(
     a: f64,
     b: f64,
-) -> ProbFunc<f64, impl Fn(TracingPath, &mut TracingData) -> f64> {
+) -> ProbFunc<f64, impl Fn(&mut TracingPathRec, &mut TracingData) -> f64> {
     ProbFunc(
-        move |tracing_path: TracingPath, tracing_data: &mut TracingData| {
+        move |tracing_path: &mut TracingPathRec,
+              tracing_data: &mut TracingData| {
             let params = UniformParams(a, b);
             let distribution =
                 PrimitiveDistribution::Uniform(Uniform::new(params));
 
-            match trace_macro_injection(
-                distribution,
-                &tracing_path,
-                tracing_data,
-            ) {
+            match primitive_trace(distribution, tracing_path, tracing_data) {
                 PrimitiveSupportType::Uniform(result) => result,
                 _ => unreachable!(),
             }
         },
     )
+}
+
+fn primitive_trace(
+    distribution: PrimitiveDistribution,
+    tracing_path: &mut TracingPathRec,
+    tracing_data: &mut TracingData,
+) -> PrimitiveSupportType {
+    let tracing_path = tracing_path.next_variable();
+    // println!("{:?} : {}", distribution.params(), tracing_path);
+
+    let database_entry = match &tracing_data.proposal {
+        // If there is a proposal, and it is for us, take it
+        Some((n, entry)) if *n == tracing_path => Some(entry),
+        // Otherwise, try looking in the trace for our entry
+        _ => tracing_data.trace.get(&tracing_path),
+    };
+    match database_entry {
+        Some(trace_entry)
+            if trace_entry.distribution.params() == distribution.params() =>
+        {
+            // ^ The random choice in the database with our name has sampled
+            // the same distribution with the same parameters.
+
+            tracing_data.trace_log_likelihood += trace_entry.log_likelihood;
+
+            trace_entry.value
+        }
+        Some(trace_entry)
+            if trace_entry.distribution.kind_eq(&distribution) =>
+        {
+            // ^ The random choice in the database with our name has sampled
+            // the same distribution, but with different parameters.
+            // We reuse the value, but have to calculate a new log likelihood.
+
+            let value = trace_entry.value;
+            let log_likelihood = distribution.log_likelihood(value);
+            tracing_data.trace.insert(
+                tracing_path.clone(),
+                TraceEntry {
+                    distribution: distribution.clone(),
+                    value,
+                    log_likelihood,
+                },
+            );
+            tracing_data.trace_log_likelihood += log_likelihood;
+            value
+        }
+        _ => {
+            // ^ There either was no random choice in the database with our name,
+            // or it was of the wrong type. So we sample a fresh value and insert
+            // it into the database.
+
+            // let distribution = Bernoulli::new(params).unwrap();
+            let value = distribution.sample();
+            let log_likelihood = distribution.log_likelihood(value);
+            let trace_entry = TraceEntry {
+                distribution: distribution.clone(),
+                value,
+                log_likelihood,
+            };
+            tracing_data.trace.insert(tracing_path.clone(), trace_entry);
+            tracing_data.trace_log_likelihood += log_likelihood;
+            value
+        }
+    }
 }

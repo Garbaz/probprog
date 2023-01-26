@@ -23,7 +23,7 @@ where
         let end: f64 = range.end.into();
         let x: f64 = x.into();
         let p = ((x - start) / (end - start)) * (buckets as f64);
-        let i = (p as usize).clamp(0, buckets);
+        let i = (p as usize).clamp(0, buckets - 1);
         occurences[i] += 1;
     }
     occurences

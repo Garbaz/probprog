@@ -1,6 +1,6 @@
 use crate::{
     distribution::Distribution,
-    trace::{TraceEntry, TracingData, TracingPath}, probfunc::ProbFunc,
+    __internal::trace::{TraceEntry, TracingData, TracingPathRec}, __internal::probfunc::ProbFunc,
 };
 
 use rand_distr as rd;
@@ -13,15 +13,15 @@ pub struct MCMCConfig {
 /// Sample from the given probabilistic function with the Markov Chain Monte Carlo algorithm
 pub fn mcmc<F, B>(config: MCMCConfig, prob_func: &mut ProbFunc<B, F>) -> Vec<B>
 where
-    F: Fn(TracingPath, &mut TracingData) -> B,
+    F: Fn(&mut TracingPathRec, &mut TracingData) -> B,
 {
     let mut results: Vec<B> = Vec::new();
     let mut tracing_data = TracingData::new(); // Create empty trace
-    (prob_func.0)(TracingPath::new(), &mut tracing_data); // Initialize the trace
+    (prob_func.0)(&mut TracingPathRec::new(), &mut tracing_data); // Initialize the trace
     for i in 0..config.samples {
         // Pick a random point in the trace to wiggle
         let wiggle_path = {
-            let names: Vec<&TracingPath> = tracing_data.trace.keys().collect();
+            let names: Vec<_> = tracing_data.trace.keys().collect();
             let name_sampler = rd::Uniform::new(0, names.len());
             let wiggle_index = rd::Distribution::sample(
                 &name_sampler,
@@ -56,7 +56,7 @@ where
 
         // Run again, this time with the proposal to calculate it's likelihood
         {
-            let r = (prob_func.0)(TracingPath::new(), &mut tracing_data);
+            let r = (prob_func.0)(&mut TracingPathRec::new(), &mut tracing_data);
             if i > config.burn_in {
                 results.push(r);
             }
