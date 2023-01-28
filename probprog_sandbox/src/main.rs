@@ -1,42 +1,37 @@
 use probprog::{
     inference::{mcmc, MCMCConfig},
     primitives::bernoulli,
-    prob, sample,
+    prob, s,
     stats::{statistics::densities, visualization::simple_bar_graph},
 };
 
-/// A mock-up of how a probabilstic function would end up looking like
-/// after being transformed by the macro.
-/// Note: We should extract as much as possible from the function itself
-/// into pre-written functions, such that the macro shenanigans are kept
-/// at a minimum.
 #[prob]
 fn testfunc() -> f64 {
-    let mut __probprog_tracing_path =
-        __probprog_tracing_path.descend_function("testfunc");
+    // let mut __probprog_tracing_path =
+    //     __probprog_tracing_path.descend_function("testfunc");
 
     let mut s = 0.;
 
-    {
-        let mut __probprog_tracing_path =
-            __probprog_tracing_path.descend_loop();
+    // {
+    // let mut __probprog_tracing_path =
+    //     __probprog_tracing_path.descend_loop();
+    for _ in 0..3 {
+        // {
+        //     let mut __probprog_tracing_path =
+        //         __probprog_tracing_path.descend_loop();
         for _ in 0..3 {
-            {
-                let mut __probprog_tracing_path =
-                    __probprog_tracing_path.descend_loop();
-                for _ in 0..3 {
-                    if sample!(bernoulli(0.5)) {
-                        s += 1.;
-                    } else {
-                        s -= 1.;
-                    }
-
-                    __probprog_tracing_path.increment_loop();
-                }
+            if s!(bernoulli(0.5)) {
+                s += 1.;
+            } else {
+                s -= 1.;
             }
-            __probprog_tracing_path.increment_loop();
+
+            //     __probprog_tracing_path.increment_loop();
         }
+        // }
+        // __probprog_tracing_path.increment_loop();
     }
+    // }
 
     // let __probprog_postponed_result = {
     //     if x {
@@ -50,23 +45,23 @@ fn testfunc() -> f64 {
     s
 }
 
-#[prob]
-fn testfunc2(p: f64) -> bool {
-    let mut __probprog_tracing_path =
-        __probprog_tracing_path.descend_function("testfunc2");
-    sample!(bernoulli(p))
-}
+// #[prob]
+// fn testfunc2(p: f64) -> bool {
+//     let mut __probprog_tracing_path =
+//         __probprog_tracing_path.descend_function("testfunc2");
+//     sample!(bernoulli(p))
+// }
 
-#[prob]
-fn testfunc4() -> f64 {
-    let mut __probprog_tracing_path =
-        __probprog_tracing_path.descend_function("testfunc4");
-    if sample!(bernoulli(0.1)) {
-        sample!(testfunc4()) + 1.
-    } else {
-        0.
-    }
-}
+// #[prob]
+// fn testfunc4() -> f64 {
+//     let mut __probprog_tracing_path =
+//         __probprog_tracing_path.descend_function("testfunc4");
+//     if sample!(bernoulli(0.1)) {
+//         sample!(testfunc4()) + 1.
+//     } else {
+//         0.
+//     }
+// }
 
 // fn testfunc3(__tracing_path: TracingPathRec) {
 //     let mut __tracing_path = __tracing_path.descend_function("testfunc3");
@@ -98,12 +93,19 @@ fn testfunc4() -> f64 {
 //     }
 // }
 
+// #[prob]
+// fn testfunc5() {
+//     let mut __probprog_tracing_path =
+//         __probprog_tracing_path.descend_function("testfunc5");
+//     let q = sm!(bernoulli(0.5));
+// }
+
 fn main() {
     // testfunc3(TracingPathRec::new());
 
-    let samples = 1000000;
+    let samples = 10000;
     let burn_in = samples / 4;
-    let results = mcmc(MCMCConfig { samples, burn_in }, &mut testfunc4());
+    let results = mcmc(MCMCConfig { samples, burn_in }, &mut testfunc());
     // println!("{:#?}",tracing_data);
     // println!("{:?}", results);
     let results = results.into_iter()/* .map(|x| OrderedFloat(x)) */;
@@ -112,7 +114,7 @@ fn main() {
     // let results = normalize_map(results);
     // println!("{:?}", results);
     // println!("{:?}", results);
-    let results = densities(0.0..80.0, 80, results);
+    let results = densities(0.0..10.0, 50, results);
     // println!("{:?}", results);
     println!("{}", simple_bar_graph(16, &results));
 

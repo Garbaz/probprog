@@ -1,111 +1,276 @@
 extern crate proc_macro;
-
 use proc_macro as pm;
-use proc_macro2::{Span, TokenStream};
-use quote::{quote, ToTokens};
-use syn::{
-    self, parse_macro_input, Block, ItemFn, ReturnType, Token, Type,
-};
+
+mod prob;
+mod sample;
 
 #[proc_macro_attribute]
-pub fn prob(_attrs: pm::TokenStream, input: pm::TokenStream) -> pm::TokenStream {
-    // let input = TokenStream::from(input);
-    let code = input.clone();
-    // println!("{:#?}", code);
-
-    let mut func = parse_macro_input!(code as ItemFn);
-
-    // println!("{:#?}", func);
-
-    let mut rarrow = Token![->](Span::call_site());
-    let orig_func_output = match func.sig.output {
-        ReturnType::Default => quote! {()},
-        ReturnType::Type(a, t) => {
-            rarrow = a;
-            t.into_token_stream()
-        }
-    };
-
-    // println!("{:#?}", orig_func_output);
-    // println!("{}", orig_func_output.to_token_stream().to_string());
-
-    let new_func_output = quote! {
-        ::probprog::__internal::probfunc::ProbFunc<(#orig_func_output),
-                 impl Fn(&mut ::probprog::__internal::trace::TracingPathRec,
-                         &mut ::probprog::__internal::trace::TracingData) -> (#orig_func_output)>
-    }.into();
-
-    // println!("{}", new_func_output.to_string());
-
-    let new_func_output = parse_macro_input!(new_func_output as Type);
-
-    func.sig.output = ReturnType::Type(rarrow, Box::new(new_func_output));
-
-    // println!("{}", func.to_token_stream().to_string());
-
-    let old_func_block = func.block.into_token_stream();
-    let new_func_block = quote! {
-        {
-            ::probprog::__internal::probfunc::ProbFunc::new(
-                move | __probprog_tracing_path: &mut ::probprog::__internal::trace::TracingPathRec,
-                       __probprog_tracing_data: &mut ::probprog::__internal::trace::TracingData |
-                    #old_func_block
-            )
-        }
-    }
-    .into();
-    let new_func_block = parse_macro_input!(new_func_block as Block);
-    func.block = Box::new(new_func_block);
-
-    // println!("{}", func.to_token_stream().to_string());
-
-    // let output: TokenStream = code.into_iter().map(prob_rec).collect();
-
-    // let attrs = Punctuated::<TokenStream, Token![,]>::parse_terminated(attrs);
-    // println!("{:#?}", attrs);
-    // let ast = input.clone();
-    // println!("{:#?}", ast);
-    // let ast = parse_macro_input!(ast as ItemFn);
-    // let stmts = ast.block.stmts;
-    // println!("{:#?}", stmts);
-    // for s in stmts {
-    //     match s {
-    //         Stmt::Local(x) => {
-    //             println!("{:?}", x.init.unwrap().1);
-    //         }
-    //         Stmt::Item(x) => {
-    //             // ?
-    //         }
-    //         Stmt::Expr(x) => {
-    //         }
-    //         Stmt::Semi(x, y) => {
-    //             /* Do same with `x` as in `Stmt::Expr` */
-    //         }
-    //     }
-    // }
-    // ast.to_token_stream().into()
-    // pm::TokenStream::from(input)
-    func.into_token_stream().into()
+pub fn prob(
+    attrs: pm::TokenStream,
+    input: pm::TokenStream,
+) -> pm::TokenStream {
+    prob::prob(attrs, input)
 }
 
 #[proc_macro]
 pub fn sample(input: pm::TokenStream) -> pm::TokenStream {
-    let input = TokenStream::from(input);
-    //    let code = input.clone();
-
-    let output = quote! {
-        ::probprog::__internal::probfunc::traced_sample(
-            &mut (#input),
-            &mut __probprog_tracing_path,
-            __probprog_tracing_data,
-        )
-    };
-
-    //    println!("{}", code.to_string());
-
-    pm::TokenStream::from(output)
-    //    output
+    sample::sample(input)
 }
+
+#[proc_macro]
+pub fn s(input : pm::TokenStream) -> pm::TokenStream {
+    sample::s(input)
+}
+
+
+// mod prob;
+// mod sample;
+
+
+// use proc_macro as pm;
+// use proc_macro2::{Group, Punct, Spacing, Span, TokenStream, TokenTree};
+// use quote::{quote, ToTokens};
+// use syn::{
+//     self,
+//     parse::Parse,
+//     parse2, parse_macro_input,
+//     visit_mut::{visit_expr_mut, VisitMut},
+//     Block, Expr, ExprUnary, ItemFn, Local, ReturnType, Stmt, Token, Type, UnOp,
+// };
+
+
+
+
+// #[proc_macro]
+// pub fn s(input : pm::TokenStream) -> pm::TokenStream {
+//     let input = parse_macro_input!(input as Expr);
+
+//     let output = sample_expr(input);
+
+//     output.into()
+// }
+
+// fn substitute_custom_tilde_syntax(
+//     input: pm::TokenStream,
+// ) -> pm::TokenStream {
+//     // let output = input.clone();
+//     // println!("{:#?}", input.to_string());
+
+//     fn replace_tildes(ts: TokenStream) -> TokenStream {
+//         ts.into_iter()
+//             .map(|t| match t {
+//                 TokenTree::Group(g) => {
+//                     Group::new(g.delimiter(), replace_tildes(g.stream()))
+//                         .into_token_stream()
+//                 }
+//                 TokenTree::Punct(p) if p.as_char() == '%' => {
+//                     quote! {
+//                         *-*-*-*-
+//                     }
+//                 }
+//                 _ => t.into_token_stream(),
+//             })
+//             .collect()
+//     }
+
+//     let intermediate = replace_tildes(input.into());
+
+//     // println!("{:#?}", intermediate.to_string());
+
+//     let mut function: ItemFn = parse2(intermediate).unwrap();
+
+//     // println!("{:#?}", function);
+
+
+//     IntermediateToSample.visit_item_fn_mut(&mut function);
+
+//     let output = function.into_token_stream();
+
+//     println!("{}", output.to_string());
+
+//     output.into()
+// }
+
+// fn match_deref(e: &Expr) -> Option<&Expr> {
+//     match e {
+//         Expr::Unary(ExprUnary {
+//             op: UnOp::Deref(_),
+//             expr,
+//             ..
+//         }) => Some(expr),
+//         _ => None,
+//     }
+// }
+
+// fn match_neg(e: &Expr) -> Option<&Expr> {
+//     match e {
+//         Expr::Unary(ExprUnary {
+//             op: UnOp::Neg(_),
+//             expr,
+//             ..
+//         }) => Some(expr),
+//         _ => None,
+//     }
+// }
+
+// struct IntermediateToSample;
+
+// impl VisitMut for IntermediateToSample {
+//     fn visit_expr_mut(&mut self, e: &mut Expr) {
+//         let b = Some(&*e)
+//             .and_then(match_deref)
+//             .and_then(match_neg)
+//             .and_then(match_deref)
+//             .and_then(match_neg)
+//             .and_then(match_deref)
+//             .and_then(match_neg)
+//             .and_then(match_deref)
+//             .and_then(match_neg);
+
+//         // let b = Some(&*e)
+//         //     .and_then(match_deref)
+//         //     .and_then(match_neg);
+
+//         // println!("{:?}", b);
+
+//         match b {
+//             Some(b) => {
+//                 let mut b = b.clone();
+//                 self.visit_expr_mut(&mut b);
+//                 let b = sample_expr(b);
+//                 *e = parse2(b).unwrap();
+//             }
+//             _ => {}
+//         };
+//     }
+// }
+
+
+
+
+// fn remove_tildes(ts: TokenStream) -> TokenStream {
+//     ts.into_iter()
+//         .map(|t| match t {
+//             TokenTree::Group(g) => {
+//                 Group::new(g.delimiter(), remove_tildes(g.stream()))
+//                     .into_token_stream()
+//             }
+//             TokenTree::Punct(p) if p.as_char() == '-' => {
+//                 quote! {
+//                     ~
+//                 }
+//             }
+//             _ => t.into_token_stream(),
+//         })
+//         .collect()
+// }
+
+// #[proc_macro_attribute]
+// pub fn prob_test(
+//     _attrs: pm::TokenStream,
+//     input: pm::TokenStream,
+// ) -> pm::TokenStream {
+//     println!("{}", input.to_string());
+//     let output : pm::TokenStream = remove_tildes(input.into()).into();
+//     println!("{}", output.to_string());
+//     output
+// }
+// #[proc_macro_attribute]
+// pub fn prob_test(
+//     _attrs: pm::TokenStream,
+//     input: pm::TokenStream,
+// ) -> pm::TokenStream {
+//     let output = input.clone();
+//     println!("{:#?}", input);
+
+//     fn descend(ts: TokenStream) -> TokenStream {
+//         let q = ts
+//             .into_iter()
+//             .map(|tt| {
+//                 match tt {
+//                     TokenTree::Group(g) => {
+//                         // println!("{:?}", gts);
+//                         Group::new(g.delimiter(), descend(g.stream()))
+//                             .into_token_stream()
+//                     }
+//                     TokenTree::Punct(p)
+//                         if p.as_char() == '~'
+//                             && p.spacing() == Spacing::Alone =>
+//                     {
+//                         println!("Tilde encountered!");
+//                         quote! {
+//                             *-*-*-
+//                         }
+//                     }
+//                     _ => tt.into_token_stream(),
+//                 }
+//             })
+//             .collect();
+//         q
+//     }
+
+//     fn descend3(ts: TokenStream) -> TokenStream {
+//         let q = ts.into_iter().skip_while(|x| match x {
+//             TokenTree::Punct(p)
+//                 if p.as_char() == '~' && p.spacing() == Spacing::Alone =>
+//             {
+//                 true
+//             }
+//             TokenTree::Group(_) => true,
+//             _ => false,
+//         });
+
+//         todo!()
+//     }
+
+//     let q: pm::TokenStream = descend(input.into()).into();
+//     // println!("{:#?}", q);
+//     let f = parse_macro_input!(q as ItemFn);
+//     println!("{:?}", f);
+
+//     fn descend2(ts: ItemFn) -> ItemFn {
+//         let block = ts.block;
+//         let stmts = block.stmts;
+//         for s in stmts {
+//             match s {
+//                 Stmt::Local(mut l) => {
+//                     l.init = if let Some((q, e)) = l.init {
+//                         Some((q, Box::new(dodathing(*e))))
+//                     } else {
+//                         None
+//                     };
+//                     todo!()
+//                 }
+//                 Stmt::Item(i) => todo!(),
+//                 Stmt::Expr(e) => todo!(),
+//                 Stmt::Semi(e, s) => todo!(),
+//             }
+//         }
+
+//         ItemFn {
+//             attrs: ts.attrs,
+//             vis: ts.vis,
+//             sig: ts.sig,
+//             block: todo!(),
+//         }
+//     }
+
+//     fn dodathing(e: Expr) -> Expr {
+//         todo!()
+//     }
+
+//     // let qq = quote! {
+//     //         bernoulli(0.5)
+//     // };
+
+//     // let qqq = parse2::<Expr>(qq);
+//     // println!("{:?}", qqq);
+
+//     // let q: TokenStream = q.into_iter().map(descend).collect();
+
+//     // println!("{:#?}", parse_macro_input!(input as ItemFn));
+//     output
+// }
 
 // #[proc_macro]
 // pub fn sample(input: pm::TokenStream) -> pm::TokenStream {
