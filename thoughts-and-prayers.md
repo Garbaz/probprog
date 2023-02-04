@@ -3,5 +3,6 @@
 - Error handling should be as comprehensible as possible to the end user (if possible use custom errors, if not, ensure at least that the right part of the code is highlighted)
 - How do we hand the `tracing_*` arguments through to other prob functions being called?
   - Simple option: Any function call which takes arguments as a `prob` function would take is transformed during code analysis in the macro (Make `tracing_path` a new-type for that). Problem: How do we handle funky uses of functions?
-- Clean up the trace after each iteration? Is this principally necessary or only for performance?
+- Clean up the trace after each iteration? Is this principally necessary or only for performance? (<--!!?)
 - Implement more informed proposal functions
+- Handle MCMC for a failed sample

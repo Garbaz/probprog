@@ -173,7 +173,7 @@ impl From<&TracingPathRec<'_>> for TracingPath {
 //     }
 // }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TracingData {
     pub trace: BTreeMap<TracingPath, TraceEntry>,
     pub proposal: Option<(TracingPath, TraceEntry)>,

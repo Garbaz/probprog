@@ -1,6 +1,7 @@
 use probprog::{
+    c,
     inference::{mcmc, MCMCConfig},
-    primitives::bernoulli,
+    primitives::{bernoulli, uniform},
     prob, s,
     stats::{statistics::densities, visualization::simple_bar_graph},
 };
@@ -100,12 +101,83 @@ fn testfunc() -> f64 {
 //     let q = sm!(bernoulli(0.5));
 // }
 
+#[prob]
+fn testfunc6(max: f64, count: usize) -> Vec<f64> {
+    let mut samples = vec![];
+    for _ in 0..count {
+        samples.push(s!(uniform(0., max)));
+    }
+    samples
+}
+
+#[prob]
+fn testfunc7(evidence: Vec<f64>) {
+    let max = s!(uniform(0., 1000.));
+    let samples = s!(testfunc6(max, evidence.len()));
+    if evidence
+        .iter()
+        .zip(samples)
+        .all(|(e, s)| (e - s).abs() < 1.)
+    {
+        // accept :)
+    } else {
+        // reject :(
+    }
+}
+
+#[prob]
+fn testfunc9() -> f64 {
+    let x = s!(uniform(-1., 1.));
+    c!(x > 0.5 || x < -0.5);
+    x
+}
+
+#[prob]
+fn testfunc8(p: f64) -> bool {
+    let misclasification = s!(bernoulli(0.1));
+    let true_sample = s!(bernoulli(p));
+    let observed_sample = if misclasification {
+        !true_sample
+    } else {
+        true_sample
+    };
+
+    observed_sample
+}
+
+#[prob]
+fn testfunc8b(observations: Vec<bool>) -> f64 {
+    let p = s!(uniform(0., 1.));
+    let obs_true = observations.iter().filter(|b| **b).count();
+    let mut smp_true = 0;
+    for _ in 0..observations.len() {
+        if s!(testfunc8(p)) {
+            smp_true += 1;
+        }
+    }
+
+    c!(obs_true == smp_true);
+    // for s in &observations {
+    //     let t = s!(testfunc8(p));
+    //     c!(*s == t);
+    // }
+    p
+}
+
 fn main() {
     // testfunc3(TracingPathRec::new());
 
-    let samples = 10000;
-    let burn_in = samples / 4;
-    let results = mcmc(MCMCConfig { samples, burn_in }, &mut testfunc());
+    let samples = 100000;
+    let config = MCMCConfig {
+        samples,
+        burn_in: samples / 4,
+        init_attempts: samples,
+    };
+    let (results, report) = mcmc(
+        config,
+        &mut testfunc8b(vec![true, false, true, true, false, false]),
+    )
+    .unwrap();
     // println!("{:#?}",tracing_data);
     // println!("{:?}", results);
     let results = results.into_iter()/* .map(|x| OrderedFloat(x)) */;
@@ -114,9 +186,10 @@ fn main() {
     // let results = normalize_map(results);
     // println!("{:?}", results);
     // println!("{:?}", results);
-    let results = densities(0.0..10.0, 50, results);
+    let results = densities(0.0..1.0, 80, results);
     // println!("{:?}", results);
     println!("{}", simple_bar_graph(16, &results));
+    println!("{:#?}", report);
 
     // let mut tracing_data = TracingData::new(); // Initialize empty trace
     // probfunc(String::new(), &mut tracing_data); // Initialize trace

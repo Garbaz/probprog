@@ -1,26 +1,43 @@
+use std::marker::PhantomData;
+
 use crate::__internal::trace::{TracingData, TracingPathRec};
 
-pub struct ProbFunc<T, F>(pub(crate) F)
-where
-    F: Fn(&mut TracingPathRec, &mut TracingData) -> T;
+#[derive(Debug)]
+pub struct ConditionError {
+    pub expr: String,
+}
 
-impl<T, F> ProbFunc<T, F>
-where
-    F: Fn(&mut TracingPathRec, &mut TracingData) -> T,
-{
-    pub fn new(prob_func: F) -> Self {
-        Self(prob_func)
+impl ConditionError {
+    pub fn new(condition_expr: &str) -> Self {
+        Self {
+            expr: condition_expr.to_string(),
+        }
     }
 }
 
-pub fn traced_sample<T, F>(
+pub trait ProbFn<T>:
+    Fn(&mut TracingPathRec, &mut TracingData) -> Result<T, ConditionError>
+{
+}
+
+impl<T, F> ProbFn<T> for F where
+    F: Fn(&mut TracingPathRec, &mut TracingData) -> Result<T, ConditionError>
+{
+}
+
+pub struct ProbFunc<T, F: ProbFn<T>>(pub(crate) F, PhantomData<T>);
+
+impl<T, F: ProbFn<T>> ProbFunc<T, F> {
+    pub fn new(prob_func: F) -> Self {
+        Self(prob_func, PhantomData)
+    }
+}
+
+pub fn traced_sample<T, F: ProbFn<T>>(
     prob_func: &mut ProbFunc<T, F>,
     tracing_path: &mut TracingPathRec,
     tracing_data: &mut TracingData,
-) -> T
-where
-    F: Fn(&mut TracingPathRec, &mut TracingData) -> T,
-{
+) -> Result<T, ConditionError> {
     (prob_func.0)(tracing_path, tracing_data)
 }
 

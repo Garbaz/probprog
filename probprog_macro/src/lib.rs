@@ -1,14 +1,12 @@
 extern crate proc_macro;
 use proc_macro as pm;
 
+mod condition;
 mod prob;
 mod sample;
 
 #[proc_macro_attribute]
-pub fn prob(
-    attrs: pm::TokenStream,
-    input: pm::TokenStream,
-) -> pm::TokenStream {
+pub fn prob(attrs: pm::TokenStream, input: pm::TokenStream) -> pm::TokenStream {
     prob::prob(attrs, input)
 }
 
@@ -18,14 +16,27 @@ pub fn sample(input: pm::TokenStream) -> pm::TokenStream {
 }
 
 #[proc_macro]
-pub fn s(input : pm::TokenStream) -> pm::TokenStream {
-    sample::s(input)
+pub fn s(input: pm::TokenStream) -> pm::TokenStream {
+    sample::sample(input)
 }
 
+#[proc_macro]
+pub fn condition(input: pm::TokenStream) -> pm::TokenStream {
+    condition::condition(input)
+}
+
+// #[proc_macro]
+// pub fn cond(input: pm::TokenStream) -> pm::TokenStream {
+//     condition::condition(input)
+// }
+
+#[proc_macro]
+pub fn c(input: pm::TokenStream) -> pm::TokenStream {
+    condition::condition(input)
+}
 
 // mod prob;
 // mod sample;
-
 
 // use proc_macro as pm;
 // use proc_macro2::{Group, Punct, Spacing, Span, TokenStream, TokenTree};
@@ -37,9 +48,6 @@ pub fn s(input : pm::TokenStream) -> pm::TokenStream {
 //     visit_mut::{visit_expr_mut, VisitMut},
 //     Block, Expr, ExprUnary, ItemFn, Local, ReturnType, Stmt, Token, Type, UnOp,
 // };
-
-
-
 
 // #[proc_macro]
 // pub fn s(input : pm::TokenStream) -> pm::TokenStream {
@@ -80,7 +88,6 @@ pub fn s(input : pm::TokenStream) -> pm::TokenStream {
 //     let mut function: ItemFn = parse2(intermediate).unwrap();
 
 //     // println!("{:#?}", function);
-
 
 //     IntermediateToSample.visit_item_fn_mut(&mut function);
 
@@ -144,9 +151,6 @@ pub fn s(input : pm::TokenStream) -> pm::TokenStream {
 //         };
 //     }
 // }
-
-
-
 
 // fn remove_tildes(ts: TokenStream) -> TokenStream {
 //     ts.into_iter()

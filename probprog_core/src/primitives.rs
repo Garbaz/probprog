@@ -8,20 +8,21 @@
 
 use crate::{
     __internal::probfunc::ProbFunc,
-    __internal::trace::{
-        PrimitiveDistribution, PrimitiveSupportType, TracingData,
-        TracingPathRec, TraceEntry,
-    },
+    __internal::{trace::{
+        PrimitiveDistribution, PrimitiveSupportType, TraceEntry, TracingData,
+        TracingPathRec,
+    }, probfunc::ProbFn},
+    distribution::Distribution,
     distributions::{
         bernoulli::{Bernoulli, BernoulliParams},
         uniform::{Uniform, UniformParams},
-    }, distribution::Distribution,
+    },
 };
 
 pub fn bernoulli(
     p: f64,
-) -> ProbFunc<bool, impl Fn(&mut TracingPathRec, &mut TracingData) -> bool> {
-    ProbFunc(
+) -> ProbFunc<bool, impl ProbFn<bool>> {
+    ProbFunc::new(
         move |tracing_path: &mut TracingPathRec,
               tracing_data: &mut TracingData| {
             let params = BernoulliParams(p);
@@ -29,7 +30,7 @@ pub fn bernoulli(
                 PrimitiveDistribution::Bernoulli(Bernoulli::new(params));
 
             match primitive_trace(distribution, tracing_path, tracing_data) {
-                PrimitiveSupportType::Bernoulli(result) => result,
+                PrimitiveSupportType::Bernoulli(result) => Ok(result),
                 _ => unreachable!(),
             }
         },
@@ -39,8 +40,8 @@ pub fn bernoulli(
 pub fn uniform(
     a: f64,
     b: f64,
-) -> ProbFunc<f64, impl Fn(&mut TracingPathRec, &mut TracingData) -> f64> {
-    ProbFunc(
+) -> ProbFunc<f64, impl ProbFn<f64>> {
+    ProbFunc::new(
         move |tracing_path: &mut TracingPathRec,
               tracing_data: &mut TracingData| {
             let params = UniformParams(a, b);
@@ -48,7 +49,7 @@ pub fn uniform(
                 PrimitiveDistribution::Uniform(Uniform::new(params));
 
             match primitive_trace(distribution, tracing_path, tracing_data) {
-                PrimitiveSupportType::Uniform(result) => result,
+                PrimitiveSupportType::Uniform(result) => Ok(result),
                 _ => unreachable!(),
             }
         },

@@ -12,20 +12,12 @@ pub fn sample(input: pm::TokenStream) -> pm::TokenStream {
     output.into()
 }
 
-pub fn s(input: pm::TokenStream) -> pm::TokenStream {
-    let input = parse_macro_input!(input as Expr);
-
-    let output = sample_expr(input);
-
-    output.into()
-}
-
 fn sample_expr(expr: Expr) -> TokenStream {
     quote! {
         (::probprog::__internal::probfunc::traced_sample(
             &mut (#expr),
             &mut __probprog_tracing_path,
             __probprog_tracing_data,
-        ))
+        )?)
     }
 }

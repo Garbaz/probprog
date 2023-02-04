@@ -5,7 +5,7 @@ use quote::{quote, ToTokens};
 use syn::{
     parse2, parse_macro_input,
     visit_mut::{self, VisitMut},
-    Block, Expr, ItemFn, ReturnType, Token,
+    Block, Expr, ExprReturn, ItemFn, ReturnType, Token,
 };
 
 pub fn prob(
@@ -21,6 +21,8 @@ pub fn prob(
     let block = add_func_tracing(block, &func.sig.ident);
 
     let block = add_loop_tracing(block);
+
+    let block = bump_returns(block);
 
     let block = probfunc_block(block);
 
@@ -43,9 +45,9 @@ fn probfunc_return_type(input: ReturnType) -> ReturnType {
 
     let new_func_output = quote! {
         ::probprog::__internal::probfunc::ProbFunc<(#orig_func_output),
-            impl Fn(&mut ::probprog::__internal::trace::TracingPathRec,
-                    &mut ::probprog::__internal::trace::TracingData) -> (#orig_func_output)>
-    }.into();
+            impl ::probprog::__internal::probfunc::ProbFn<#orig_func_output>>
+    }
+    .into();
 
     // We should be able to just unwrap here without a chance for error.
     let new_func_output = parse2(new_func_output).unwrap();
@@ -57,12 +59,15 @@ fn probfunc_return_type(input: ReturnType) -> ReturnType {
 /// `{ProbFunc::new(move |...| {17.29})}`.
 fn probfunc_block(input: Block) -> Block {
     let old_func_block = input.into_token_stream();
+    // let old_func_block_span = old_func_block.span();
     let new_func_block = quote! {
         {
             ::probprog::__internal::probfunc::ProbFunc::new(
                 move | __probprog_tracing_path: &mut ::probprog::__internal::trace::TracingPathRec,
                        __probprog_tracing_data: &mut ::probprog::__internal::trace::TracingData |
-                    #old_func_block
+                    {
+                        ::std::result::Result::Ok(#old_func_block)
+                    }
             )
         }
     }.into();
@@ -140,4 +145,27 @@ fn tack_on_increment_loop(input: &Block) -> Block {
         }
     })
     .unwrap()
+}
+
+fn bump_returns(mut input : Block) -> Block {
+    BumpReturns.visit_block_mut(&mut input);
+    input
+}
+
+struct BumpReturns;
+
+impl VisitMut for BumpReturns {
+    fn visit_expr_return_mut(&mut self, i: &mut ExprReturn) {
+        let new_expr = if let Some(e) = &i.expr {
+            quote! {
+                Ok(#e)
+            }
+        } else {
+            quote! {
+                Ok(())
+            }
+        };
+
+        i.expr = Some(parse2(new_expr).unwrap());
+    }
 }
