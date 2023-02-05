@@ -133,35 +133,41 @@ fn testfunc9() -> f64 {
 }
 
 #[prob]
-fn testfunc8(p: f64) -> bool {
-    let misclasification = s!(bernoulli(0.1));
-    let true_sample = s!(bernoulli(p));
-    let observed_sample = if misclasification {
-        !true_sample
-    } else {
-        true_sample
-    };
+fn toss(obs_true: usize, obs_false: usize) -> f64 {
+    #[prob]
+    fn globe(p: f64) -> bool {
+        let misclasification = s!(bernoulli(0.1));
+        let true_sample = s!(bernoulli(p));
+        if misclasification {
+            !true_sample
+        } else {
+            true_sample
+        }
+    }
 
-    observed_sample
-}
-
-#[prob]
-fn testfunc8b(observations: Vec<bool>) -> f64 {
     let p = s!(uniform(0., 1.));
-    let obs_true = observations.iter().filter(|b| **b).count();
     let mut smp_true = 0;
-    for _ in 0..observations.len() {
-        if s!(testfunc8(p)) {
+    for _ in 0..(obs_true + obs_false) {
+        if s!(globe(p)) {
             smp_true += 1;
         }
     }
 
     c!(obs_true == smp_true);
-    // for s in &observations {
-    //     let t = s!(testfunc8(p));
-    //     c!(*s == t);
-    // }
     p
+}
+
+#[prob]
+fn height_weight() -> (f64, f64) {
+    let beta = s!(uniform(0., 10.));
+    let sigma = s!(uniform(0., 5.));
+
+    #[prob]
+    fn q(beta: f64, sigma: f64, h: f64) -> f64 {
+        beta * h + s!(uniform(-sigma, sigma))
+    }
+
+    (beta, sigma)
 }
 
 fn main() {
@@ -173,11 +179,7 @@ fn main() {
         burn_in: samples / 4,
         init_attempts: samples,
     };
-    let (results, report) = mcmc(
-        config,
-        &mut testfunc8b(vec![true, false, true, true, false, false]),
-    )
-    .unwrap();
+    let (results, report) = mcmc(config, &mut toss(5, 5)).unwrap();
     // println!("{:#?}",tracing_data);
     // println!("{:?}", results);
     let results = results.into_iter()/* .map(|x| OrderedFloat(x)) */;

@@ -147,7 +147,7 @@ fn tack_on_increment_loop(input: &Block) -> Block {
     .unwrap()
 }
 
-fn bump_returns(mut input : Block) -> Block {
+fn bump_returns(mut input: Block) -> Block {
     BumpReturns.visit_block_mut(&mut input);
     input
 }

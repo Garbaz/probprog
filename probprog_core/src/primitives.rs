@@ -64,11 +64,11 @@ fn primitive_trace(
     let tracing_path = tracing_path.next_variable();
     // println!("{:?} : {}", distribution.params(), tracing_path);
 
-    let database_entry = match &tracing_data.proposal {
+    let database_entry = match &mut tracing_data.proposal {
         // If there is a proposal, and it is for us, take it
         Some((n, entry)) if *n == tracing_path => Some(entry),
         // Otherwise, try looking in the trace for our entry
-        _ => tracing_data.trace.get(&tracing_path),
+        _ => tracing_data.trace.get_mut(&tracing_path),
     };
     match database_entry {
         Some(trace_entry)
@@ -78,6 +78,8 @@ fn primitive_trace(
             // the same distribution with the same parameters.
 
             tracing_data.trace_log_likelihood += trace_entry.log_likelihood;
+
+            trace_entry.touched = true;
 
             trace_entry.value
         }
@@ -96,6 +98,7 @@ fn primitive_trace(
                     distribution: distribution.clone(),
                     value,
                     log_likelihood,
+                    touched: true,
                 },
             );
             tracing_data.trace_log_likelihood += log_likelihood;
@@ -113,6 +116,7 @@ fn primitive_trace(
                 distribution: distribution.clone(),
                 value,
                 log_likelihood,
+                touched: true,
             };
             tracing_data.trace.insert(tracing_path.clone(), trace_entry);
             tracing_data.trace_log_likelihood += log_likelihood;

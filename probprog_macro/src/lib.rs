@@ -10,6 +10,7 @@ pub fn prob(attrs: pm::TokenStream, input: pm::TokenStream) -> pm::TokenStream {
     prob::prob(attrs, input)
 }
 
+
 #[proc_macro]
 pub fn sample(input: pm::TokenStream) -> pm::TokenStream {
     sample::sample(input)

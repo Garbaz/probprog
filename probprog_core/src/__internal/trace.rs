@@ -188,6 +188,14 @@ impl TracingData {
             trace_log_likelihood: 0.,
         }
     }
+
+    /// Remove all untouched entries in the trace, and reset `touched` for all.
+    pub fn clean_trace(&mut self) {
+        self.trace.retain(|_, e| e.touched);
+        for e in self.trace.values_mut() {
+            e.touched = false;
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -195,6 +203,7 @@ pub struct TraceEntry {
     pub distribution: PrimitiveDistribution,
     pub value: PrimitiveSupportType,
     pub log_likelihood: f64,
+    pub touched: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]
