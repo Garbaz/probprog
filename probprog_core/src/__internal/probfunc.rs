@@ -1,6 +1,8 @@
 use std::marker::PhantomData;
 
-use crate::__internal::trace::{TracingData, TracingPathRec};
+use crate::__internal::trace::TracingData;
+
+use super::tracingpath::TracingPathRec;
 
 #[derive(Debug)]
 pub struct ConditionError {

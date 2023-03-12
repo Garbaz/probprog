@@ -58,7 +58,7 @@ impl Distribution for Bernoulli {
     fn log_likelihood(&self, value: Self::SupportType) -> f64 {
         match value {
             true => self.params.0.log2(),
-            false => 1. - self.params.0.log2(),
+            false => (1. - self.params.0).log2(),
         }
     }
 

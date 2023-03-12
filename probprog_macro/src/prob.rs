@@ -63,7 +63,7 @@ fn probfunc_block(input: Block) -> Block {
     let new_func_block = quote! {
         {
             ::probprog::__internal::probfunc::ProbFunc::new(
-                move | __probprog_tracing_path: &mut ::probprog::__internal::trace::TracingPathRec,
+                move | __probprog_tracing_path: &mut ::probprog::__internal::tracingpath::TracingPathRec,
                        __probprog_tracing_data: &mut ::probprog::__internal::trace::TracingData |
                     {
                         ::std::result::Result::Ok(#old_func_block)

@@ -170,16 +170,30 @@ fn height_weight() -> (f64, f64) {
     (beta, sigma)
 }
 
+#[prob]
+fn weighted_coin(obs: Vec<bool>) -> f64 {
+    let p = s!(uniform(0., 1.));
+
+    for o in &obs {
+        let s = s!(bernoulli(p));
+        c!(s == *o);
+    }
+
+    p
+}
+
 fn main() {
-    // testfunc3(TracingPathRec::new());
+    let obs = vec![
+        false, false, true, false,
+    ];
 
     let samples = 100000;
     let config = MCMCConfig {
         samples,
-        burn_in: samples / 4,
+        burn_in: samples / 2,
         init_attempts: samples,
     };
-    let (results, report) = mcmc(config, &mut toss(5, 5)).unwrap();
+    let (results, report) = mcmc(config, &mut weighted_coin(obs)).unwrap();
     // println!("{:#?}",tracing_data);
     // println!("{:?}", results);
     let results = results.into_iter()/* .map(|x| OrderedFloat(x)) */;
@@ -188,7 +202,7 @@ fn main() {
     // let results = normalize_map(results);
     // println!("{:?}", results);
     // println!("{:?}", results);
-    let results = densities(0.0..1.0, 80, results);
+    let results = densities(0.0..1.0, 60, results);
     // println!("{:?}", results);
     println!("{}", simple_bar_graph(16, &results));
     println!("{:#?}", report);

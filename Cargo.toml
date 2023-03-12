@@ -5,4 +5,5 @@ members = [
     "probprog_core",
     "probprog_macro",
     "probprog_sandbox",
+    "experiment"
 ]

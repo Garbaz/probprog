@@ -6,3 +6,5 @@
 - Clean up the trace after each iteration? Is this principally necessary or only for performance? (<--!!?)
 - Implement more informed proposal functions
 - Handle MCMC for a failed sample
+- Simplify trace entry such that we have fewer bespoke enums for the distributions (-> `new_structure.rs`)
+- Change the effect of `condition` to it simply adding `-INF` to the log-likelihood, rather than the function having a `Result` return type.

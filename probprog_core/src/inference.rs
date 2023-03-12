@@ -2,7 +2,7 @@ use crate::{
     __internal::probfunc::ProbFunc,
     __internal::{
         probfunc::ProbFn,
-        trace::{TraceEntry, TracingData, TracingPathRec},
+        trace::{TraceEntry, TracingData}, tracingpath::TracingPathRec,
     },
     distribution::Distribution,
 };

@@ -8,10 +8,13 @@
 
 use crate::{
     __internal::probfunc::ProbFunc,
-    __internal::{trace::{
-        PrimitiveDistribution, PrimitiveSupportType, TraceEntry, TracingData,
-        TracingPathRec,
-    }, probfunc::ProbFn},
+    __internal::{
+        probfunc::ProbFn,
+        trace::{
+            PrimitiveDistribution, PrimitiveSupportType, TraceEntry,
+            TracingData,
+        }, tracingpath::TracingPathRec,
+    },
     distribution::Distribution,
     distributions::{
         bernoulli::{Bernoulli, BernoulliParams},
@@ -19,9 +22,7 @@ use crate::{
     },
 };
 
-pub fn bernoulli(
-    p: f64,
-) -> ProbFunc<bool, impl ProbFn<bool>> {
+pub fn bernoulli(p: f64) -> ProbFunc<bool, impl ProbFn<bool>> {
     ProbFunc::new(
         move |tracing_path: &mut TracingPathRec,
               tracing_data: &mut TracingData| {
@@ -37,10 +38,7 @@ pub fn bernoulli(
     )
 }
 
-pub fn uniform(
-    a: f64,
-    b: f64,
-) -> ProbFunc<f64, impl ProbFn<f64>> {
+pub fn uniform(a: f64, b: f64) -> ProbFunc<f64, impl ProbFn<f64>> {
     ProbFunc::new(
         move |tracing_path: &mut TracingPathRec,
               tracing_data: &mut TracingData| {
