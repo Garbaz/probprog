@@ -7,4 +7,10 @@
 - Implement more informed proposal functions
 - Handle MCMC for a failed sample
 - Simplify trace entry such that we have fewer bespoke enums for the distributions (-> `new_structure.rs`)
-- Change the effect of `condition` to it simply adding `-INF` to the log-likelihood, rather than the function having a `Result` return type.
+- Change the effect of `condition` to it simply adding `-INF` to the log-likelihood, rather than `FnProb` having a `Result` return type.
+- Define correct kernels for distributions! They have to be symmetric around current state, right?
+- Idea: Add macro that can be applied to enums such that a categorical distribution over the enum is a primitive (optionally non-uniform)
+- Idea: Add optional parameter to `sample!` which gives a name to the location instead of the normal numbering
+- Maybe add some kind of "Block Resimulation" MH? I.e. Instead of only changing one variable at a time in our MH implementation, we change a bunch at once, with the bunch being one "block". The blocks could be user picked (additional macro), or automatically detected?
+- Factor out as much as possible from the MH implementation (i.e. the initial choice, the repetitions, etc.; We should end up with just a single MH step in a function)
+- Refactor to immutable as much as possible, esp in the macros
