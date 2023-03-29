@@ -12,5 +12,8 @@
 - Idea: Add macro that can be applied to enums such that a categorical distribution over the enum is a primitive (optionally non-uniform)
 - Idea: Add optional parameter to `sample!` which gives a name to the location instead of the normal numbering
 - Maybe add some kind of "Block Resimulation" MH? I.e. Instead of only changing one variable at a time in our MH implementation, we change a bunch at once, with the bunch being one "block". The blocks could be user picked (additional macro), or automatically detected?
-- Factor out as much as possible from the MH implementation (i.e. the initial choice, the repetitions, etc.; We should end up with just a single MH step in a function)
+- Factor out as much as possible from the MH implementation (i.e. the initial choice, the repetitions, etc.; We should end up with just a single MH step in a function). Also, just clone the trace to construct the new one, just makes life easier.
 - Refactor to immutable as much as possible, esp in the macros
+- Can we also refactor the `prob` functions themselves? I.e. instead of passing around `&mut` traces, sampling from a `prob` function (or primitive) returns a trace, which then is integrated into the current trace. 
+- Are we correctly tracing (-> path!) sampling inside a `while` loop's condition? E.g. `while sample!(bernoulli(0.5)) { ... }` should be traced like `loop {if ! sample!(bernoulli(0.5)) {break;}`
+- `smooth_condition!` / `sc!`, e.g. `sc!(x > 0)` is closer to probability 1 the futher positive x is, and closer to probability 0 the further negative x is. Is there some general, objectively most sensible way to do this? Can we handle `sc!(x > 0 && y < 0)`?

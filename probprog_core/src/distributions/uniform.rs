@@ -42,10 +42,10 @@ impl Distribution for Uniform {
         let a = self.params.0;
         let b = self.params.1;
         if a < value && value <= b {
-            1. / (b - a)
+            -((b - a).log2())
             //^ this won't crash, since `a < x && x <= b` implies `a < b`
         } else {
-            0.
+            f64::NEG_INFINITY
         }
     }
 
