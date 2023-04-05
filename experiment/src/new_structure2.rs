@@ -1,173 +1,132 @@
-use std::collections::BTreeMap;
+use crate::trace::{ParametrizedValue, TracedSample};
+use rand::thread_rng;
+use rand_distr as rd;
 
-#[derive(Clone, Debug)]
+pub trait FnProb<T>: Fn() -> TracedSample<T> {}
+
+impl<T, F: Fn() -> TracedSample<T>> FnProb<T> for F {}
+
+#[derive(Debug, Clone)]
 pub struct Sample<T> {
     pub value: T,
     pub log_likelihood: f64,
 }
 
-#[derive(Clone, Debug)]
-pub enum TracedValue {
-    Bernoulli(bool, (f64,)),
-    Uniform(f64, (f64, f64)),
-}
-
-#[derive(Clone, Debug)]
-pub struct TracedSample {
-    pub value: TracedValue,
-    pub log_likelihood: f64,
-}
-
-#[derive(Clone, Debug)]
-pub struct TraceEntry {
-    pub sample: TracedSample,
-    pub touched: bool,
-}
-
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone)]
-pub struct TracePath;
-
-impl TracePath {
-    pub fn new() -> Self {
-        TracePath
-    }
-
-    pub fn next_variable(&mut self) -> Self {
-        todo!()
-    }
-}
-
-pub struct Trace {
-    pub trace: BTreeMap<TracePath, TraceEntry>,
-    pub proposal: Option<(TracePath, TracedSample)>,
-    pub total_log_likelihood: f64,
-}
-
-impl Trace {
-    pub fn new() -> Self {
-        Trace {
-            trace: BTreeMap::new(),
-            proposal: None,
-            total_log_likelihood: 0.,
-        }
-    }
-
-    pub fn insert(
-        &mut self,
-        trace_path: TracePath,
-        traced_sample: TracedSample,
-    ) {
-        self.total_log_likelihood += traced_sample.log_likelihood;
-        self.trace.insert(
-            trace_path.clone(),
-            TraceEntry {
-                sample: traced_sample,
-                touched: true,
-            },
-        );
-    }
-
-    pub fn get(&self, trace_path: &TracePath) -> Option<TracedSample> {
-        if let Some((proposal_trace_path, proposal_traced_sample)) =
-            &self.proposal
-        {
-            if proposal_trace_path == trace_path {
-                Some(proposal_traced_sample.clone())
-            } else {
-                None
-            }
-        } else {
-            self.trace
-                .get(trace_path)
-                .map(|TraceEntry { sample, .. }| sample.clone())
-        }
-    }
-
-    pub fn propose(
-        &mut self,
-        trace_path: TracePath,
-        traced_sample: TracedSample,
-    ) {
-        self.proposal = Some((trace_path, traced_sample));
-    }
-
-    pub fn cleanup(&mut self) {
-        self.trace.retain(|_, e| e.touched);
-        for e in self.trace.values_mut() {
-            e.touched = false;
-        }
-    }
-}
-
-pub trait Distribution<T> {
-    fn sample(&self) -> Sample<T>;
-    fn traced_sample(
-        &self,
-        current_trace_path: &mut TracePath,
-        trace: &mut Trace,
-    ) -> T;
-}
-
-pub trait PrimitiveDistribution<T: Clone>: Distribution<T> {
-    fn log_likelihood(&self, value: &T) -> f64;
-    fn kernel_propose(&self, prior: &T) -> Sample<T>;
-    fn pack_value(&self, value: T) -> TracedValue;
-    fn traced_sample(
-        &self,
-        current_trace_path: &mut TracePath,
-        trace: &mut Trace,
-    ) -> T {
-        let sample = self.sample();
-        let traced_value = self.pack_value(sample.value.clone());
-        let traced_sample = TracedSample {
-            value: traced_value,
-            log_likelihood: sample.log_likelihood,
-        };
-
-        trace.insert(current_trace_path.next_variable(), traced_sample);
-
-        sample.value
-    }
-    fn traced_observe(
-        &self,
-        current_trace_path: &mut TracePath,
-        trace: &mut Trace,
-        value: T,
-    ) {
-        let log_likelihood = self.log_likelihood(&value);
-        let traced_sample = TracedSample {
-            value: self.pack_value(value.clone()),
-            log_likelihood,
-        };
-        trace.insert(current_trace_path.next_variable(), traced_sample);
-    }
-}
-
-pub trait ProbFn<T>: Fn(&mut TracePath, &mut Trace) -> T {}
-
-impl<T, F> ProbFn<T> for F where F: Fn(&mut TracePath, &mut Trace) -> T {}
-
-impl<T, F: ProbFn<T>> Distribution<T> for F {
+pub trait PrimitiveDistribution<T: Clone> {
+    fn _raw_sample(&self) -> T;
     fn sample(&self) -> Sample<T> {
-        let mut trace = Trace::new();
-        let value = self(&mut TracePath::new(), &mut trace);
+        let value = self._raw_sample();
         Sample {
+            log_likelihood: self.log_probability_density(&value),
             value,
-            log_likelihood: trace.total_log_likelihood,
         }
     }
-
-    fn traced_sample(
+    fn log_probability_density(&self, value: &T) -> f64;
+    fn kernel_propose(&self, prior: &T) -> Sample<T>;
+    fn parametrized_value(&self, value: T) -> ParametrizedValue;
+    fn parametrized_sample(
         &self,
-        current_trace_path: &mut TracePath,
-        trace: &mut Trace,
-    ) -> T {
-        self(current_trace_path, trace)
+        sample: Sample<T>,
+    ) -> Sample<ParametrizedValue> {
+        Sample {
+            value: self.parametrized_value(sample.value),
+            log_likelihood: sample.log_likelihood,
+        }
+    }
+    fn sample_traced(&self) -> TracedSample<T> {
+        self.observe_traced(self._raw_sample())
+    }
+    fn observe_traced(&self, value: T) -> TracedSample<T> {
+        let sample = Sample {
+            log_likelihood: self.log_probability_density(&value),
+            value,
+        };
+        let trace = self.parametrized_sample(sample.clone()).into();
+        TracedSample { sample, trace }
     }
 }
 
-struct Bernoulli;
+pub struct Bernoulli {
+    pub dist: rd::Bernoulli,
+    pub p: f64,
+}
 
-// impl PrimitiveDistribution<bool> for Bernoulli {
-    
-// }
+impl PrimitiveDistribution<bool> for Bernoulli {
+    fn _raw_sample(&self) -> bool {
+        rd::Distribution::sample(&self.dist, &mut thread_rng())
+    }
+    fn log_probability_density(&self, value: &bool) -> f64 {
+        match value {
+            true => self.p.log2(),
+            false => (1. - self.p).log2(),
+        }
+    }
+
+    fn kernel_propose(&self, _prior: &bool) -> Sample<bool> {
+        self.sample()
+    }
+
+    fn parametrized_value(&self, value: bool) -> ParametrizedValue {
+        ParametrizedValue::Bernoulli { value, p: self.p }
+    }
+}
+
+pub struct Uniform {
+    pub dist: rd::Uniform<f64>,
+    pub from: f64,
+    pub to: f64,
+}
+
+impl PrimitiveDistribution<f64> for Uniform {
+    fn _raw_sample(&self) -> f64 {
+        rd::Distribution::sample(&self.dist, &mut thread_rng())
+    }
+
+    fn log_probability_density(&self, value: &f64) -> f64 {
+        if &self.from < value && value <= &self.to {
+            -((self.to - self.from).log2())
+        } else {
+            f64::NEG_INFINITY
+        }
+    }
+
+    fn kernel_propose(&self, _prior: &f64) -> Sample<f64> {
+        self.sample()
+    }
+
+    fn parametrized_value(&self, value: f64) -> ParametrizedValue {
+        ParametrizedValue::Uniform {
+            value,
+            from: self.from,
+            to: self.to,
+        }
+    }
+}
+
+pub fn bernoulli(p: f64) -> Bernoulli {
+    Bernoulli {
+        dist: rd::Bernoulli::new(p).unwrap(),
+        p,
+    }
+}
+
+pub fn uniform(from: f64, to: f64) -> Uniform {
+    Uniform {
+        dist: rd::Uniform::new(from, to),
+        from,
+        to,
+    }
+}
+
+pub mod playground {
+    use super::{Sample, uniform, PrimitiveDistribution};
+    use crate::trace::{Trace, TraceDirectory, TracedSample};
+
+    /* TODO */
+    // fn sum_uniform() -> TracedSample<f64> {
+    //     let __trace_directory = TraceDirectory::Function("sum_uniform".to_string());
+
+    //     let x = uniform(-1., 1.).sample_traced();
+
+    // }
+}
