@@ -3,43 +3,10 @@
 
 use std::{
     collections::BTreeMap,
-    ops::AddAssign,
+    ops::{Add, AddAssign},
 };
 
 use crate::new_structure2::Sample;
-
-// #[derive(Debug, Clone)]
-// pub struct TraceData {
-//     trace: Trace,
-//     log_likelihood: f64,
-// }
-
-// impl TraceData {
-//     pub fn new() -> Self {
-//         Self {
-//             trace: Trace::new(),
-//             log_likelihood: 0.,
-//         }
-//     }
-// }
-
-// impl Add for TraceData {
-//     type Output = Self;
-
-//     fn add(self, rhs: Self) -> Self::Output {
-//         Self {
-//             trace: self.trace + rhs.trace,
-//             log_likelihood: self.log_likelihood + rhs.log_likelihood,
-//         }
-//     }
-// }
-
-// impl AddAssign for TraceData {
-//     fn add_assign(&mut self, rhs: Self) {
-//         self.trace += rhs.trace;
-//         self.log_likelihood += rhs.log_likelihood;
-//     }
-// }
 
 #[derive(Debug, Clone)]
 pub struct TracedSample<T> {
@@ -47,42 +14,23 @@ pub struct TracedSample<T> {
     pub trace: Trace,
 }
 
-// impl<T> TracedSample<T> {
-//     pub fn new(value: T, log_likelihood: f64) -> Self {
+impl<T> TracedSample<T> {
+    pub fn new(value: T, log_likelihood: f64) -> Self {
+        Self {
+            sample: Sample {
+                value,
+                log_likelihood,
+            },
+            trace: Trace::new(),
+        }
+    }
+}
+
+// impl<T> Add for TracedSample<T> {
+//     type Output = Self;
+
+//     fn add(self, rhs: Self) -> Self::Output {
 //         Self {
-//             sample: Sample {
-//                 value,
-//                 log_likelihood,
-//             },
-//             trace: Trace::new(),
-//         }
-//     }
-
-//     // pub fn from_sample(sample: Sample<T>, trace: Trace) -> Self {
-//     //     TracedSample {
-//     //         value: sample.value,
-//     //         trace_data: TraceData {
-//     //             trace,
-//     //             log_likelihood: sample.log_likelihood,
-//     //         },
-//     //     }
-//     // }
-// }
-
-// impl<T> From<TracedSample<T>> for Sample<T> {
-//     fn from(value: TracedSample<T>) -> Self {
-//         Self {
-//             value: value.value,
-//             log_likelihood: value.trace_data.log_likelihood,
-//         }
-//     }
-// }
-
-// impl<T, U> Add<TracedSample<U>> for TracedSample<T> {
-//     type Output = TracedSample<U>;
-
-//     fn add(self, rhs: Self::Output) -> Self::Output {
-//         TracedSample {
 //             sample: Sample {
 //                 value: rhs.sample.value,
 //                 log_likelihood: self.sample.log_likelihood
@@ -140,10 +88,6 @@ impl Trace {
         }
     }
 
-    pub fn descend(&mut self, directory: TraceDirectory) -> &mut Trace {
-        self.directories.entry(directory).or_insert(Trace::new())
-    }
-
     pub fn attach(&mut self, directory: TraceDirectory, subtrace: Trace) {
         if let Some(t) = self.directories.get_mut(&directory) {
             *t += subtrace;
@@ -186,18 +130,6 @@ impl Trace {
     }
 }
 
-// impl Add for Trace {
-//     type Output = Self;
-
-//     fn add(mut self, rhs: Self) -> Self::Output {
-//         self.variables.extend(rhs.variables);
-//         for (d, t) in rhs.directories {
-//             self = self.attach(d, t);
-//         }
-//         self
-//     }
-// }
-
 impl AddAssign for Trace {
     fn add_assign(&mut self, rhs: Self) {
         self.variables.extend(rhs.variables);
@@ -205,6 +137,12 @@ impl AddAssign for Trace {
             self.attach(d, t);
         }
     }
+
+    // type Output = Self;
+
+    // fn add(mut self, rhs: Self) -> Self::Output {
+
+    // }
 }
 
 impl From<TraceEntry> for Trace {
@@ -374,3 +312,4 @@ impl From<Sample<ParametrizedValue>> for Trace {
 
 //     Box::new(vars.chain(subs))
 // }
+

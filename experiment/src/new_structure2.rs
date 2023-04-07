@@ -2,25 +2,36 @@ use crate::trace::{ParametrizedValue, TracedSample};
 use rand::thread_rng;
 use rand_distr as rd;
 
-pub trait FnProb<T>: Fn() -> TracedSample<T> {}
-
-impl<T, F: Fn() -> TracedSample<T>> FnProb<T> for F {}
-
 #[derive(Debug, Clone)]
 pub struct Sample<T> {
     pub value: T,
     pub log_likelihood: f64,
 }
 
+pub trait Distribution<_Tag, T> {
+    fn sample(&self) -> Sample<T>;
+    fn sample_traced(&self) -> TracedSample<T>;
+}
+
+pub trait FnProb<T>: Fn() -> TracedSample<T> {}
+
+impl<T, F: Fn() -> TracedSample<T>> FnProb<T> for F {}
+
+pub enum _TagFnProb {}
+
+impl<T, F: FnProb<T>> Distribution<_TagFnProb, T> for F {
+    fn sample(&self) -> Sample<T> {
+        self().sample
+    }
+
+    fn sample_traced(&self) -> TracedSample<T> {
+        self()
+    }
+}
+
 pub trait PrimitiveDistribution<T: Clone> {
     fn _raw_sample(&self) -> T;
-    fn sample(&self) -> Sample<T> {
-        let value = self._raw_sample();
-        Sample {
-            log_likelihood: self.log_probability_density(&value),
-            value,
-        }
-    }
+
     fn log_probability_density(&self, value: &T) -> f64;
     fn kernel_propose(&self, prior: &T) -> Sample<T>;
     fn parametrized_value(&self, value: T) -> ParametrizedValue;
@@ -33,9 +44,7 @@ pub trait PrimitiveDistribution<T: Clone> {
             log_likelihood: sample.log_likelihood,
         }
     }
-    fn sample_traced(&self) -> TracedSample<T> {
-        self.observe_traced(self._raw_sample())
-    }
+
     fn observe_traced(&self, value: T) -> TracedSample<T> {
         let sample = Sample {
             log_likelihood: self.log_probability_density(&value),
@@ -43,6 +52,24 @@ pub trait PrimitiveDistribution<T: Clone> {
         };
         let trace = self.parametrized_sample(sample.clone()).into();
         TracedSample { sample, trace }
+    }
+}
+
+pub enum _TagPrimitiveDistribution {}
+
+impl<T: Clone, D: PrimitiveDistribution<T>>
+    Distribution<_TagPrimitiveDistribution, T> for D
+{
+    fn sample(&self) -> Sample<T> {
+        let value = self._raw_sample();
+        Sample {
+            log_likelihood: self.log_probability_density(&value),
+            value,
+        }
+    }
+
+    fn sample_traced(&self) -> TracedSample<T> {
+        self.observe_traced(self._raw_sample())
     }
 }
 
@@ -116,17 +143,4 @@ pub fn uniform(from: f64, to: f64) -> Uniform {
         from,
         to,
     }
-}
-
-pub mod playground {
-    use super::{Sample, uniform, PrimitiveDistribution};
-    use crate::trace::{Trace, TraceDirectory, TracedSample};
-
-    /* TODO */
-    // fn sum_uniform() -> TracedSample<f64> {
-    //     let __trace_directory = TraceDirectory::Function("sum_uniform".to_string());
-
-    //     let x = uniform(-1., 1.).sample_traced();
-
-    // }
 }
