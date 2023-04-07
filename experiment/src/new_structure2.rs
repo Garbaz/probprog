@@ -1,6 +1,4 @@
-use crate::trace::{ParametrizedValue, TracedSample};
-use rand::thread_rng;
-use rand_distr as rd;
+use crate::trace::{ParametrizedValue, Trace};
 
 #[derive(Debug, Clone)]
 pub struct Sample<T> {
@@ -8,50 +6,64 @@ pub struct Sample<T> {
     pub log_likelihood: f64,
 }
 
-pub trait Distribution<_Tag, T> {
-    fn sample(&self) -> Sample<T>;
-    fn sample_traced(&self) -> TracedSample<T>;
+#[derive(Debug, Clone)]
+pub struct TracedSample<T> {
+    pub sample: Sample<T>,
+    pub trace: Trace,
 }
 
-pub trait FnProb<T>: Fn() -> TracedSample<T> {}
+pub trait Distribution<_Tag, T> {
+    fn sample(&self) -> TracedSample<T>;
+    fn resample(&self, trace: &mut Trace) -> Sample<T>;
+}
 
-impl<T, F: Fn() -> TracedSample<T>> FnProb<T> for F {}
+pub trait FnProb<T>: Fn(&mut Trace) -> Sample<T> {}
+
+impl<T, F: Fn(&mut Trace) -> Sample<T>> FnProb<T> for F {}
 
 pub enum _TagFnProb {}
 
 impl<T, F: FnProb<T>> Distribution<_TagFnProb, T> for F {
-    fn sample(&self) -> Sample<T> {
-        self().sample
+    fn sample(&self) -> TracedSample<T> {
+        let mut trace = Trace::new();
+        let sample = self(&mut trace);
+        TracedSample { sample, trace }
     }
 
-    fn sample_traced(&self) -> TracedSample<T> {
-        self()
+    fn resample(&self, trace: &mut Trace) -> Sample<T> {
+        self(trace)
     }
 }
 
 pub trait PrimitiveDistribution<T: Clone> {
-    fn _raw_sample(&self) -> T;
+    fn raw_sample(&self) -> T;
 
-    fn log_probability_density(&self, value: &T) -> f64;
-    fn kernel_propose(&self, prior: &T) -> Sample<T>;
-    fn parametrized_value(&self, value: T) -> ParametrizedValue;
-    fn parametrized_sample(
-        &self,
-        sample: Sample<T>,
-    ) -> Sample<ParametrizedValue> {
+    fn log_likelihood(&self, value: &T) -> f64;
+
+    fn propose(&self, _prior: &T) -> Sample<T> {
+        let value = self.raw_sample();
         Sample {
-            value: self.parametrized_value(sample.value),
-            log_likelihood: sample.log_likelihood,
+            log_likelihood: self.log_likelihood(&value),
+            value,
         }
     }
 
-    fn observe_traced(&self, value: T) -> TracedSample<T> {
-        let sample = Sample {
-            log_likelihood: self.log_probability_density(&value),
-            value,
-        };
-        let trace = self.parametrized_sample(sample.clone()).into();
-        TracedSample { sample, trace }
+    fn parametrized(&self, value: T) -> ParametrizedValue;
+    // fn parametrized_sample(
+    //     &self,
+    //     sample: Sample<T>,
+    // ) -> Sample<ParametrizedValue> {
+
+    // }
+
+    fn observe(&self, trace: &mut Trace, value: T) {
+        trace.push(
+            Sample {
+                log_likelihood: self.log_likelihood(&value),
+                value: self.parametrized(value),
+            }
+            .into(),
+        );
     }
 }
 
@@ -60,87 +72,19 @@ pub enum _TagPrimitiveDistribution {}
 impl<T: Clone, D: PrimitiveDistribution<T>>
     Distribution<_TagPrimitiveDistribution, T> for D
 {
-    fn sample(&self) -> Sample<T> {
-        let value = self._raw_sample();
+    fn sample(&self) -> TracedSample<T> {
+        let mut trace = Trace::new();
+        let sample = self.resample(&mut trace);
+        TracedSample { sample, trace }
+    }
+
+    fn resample(&self, trace: &mut Trace) -> Sample<T> {
+        let value = self.raw_sample();
+        let log_likelihood = self.log_likelihood(&value);
+        self.observe(trace, value.clone());
         Sample {
-            log_likelihood: self.log_probability_density(&value),
             value,
+            log_likelihood,
         }
-    }
-
-    fn sample_traced(&self) -> TracedSample<T> {
-        self.observe_traced(self._raw_sample())
-    }
-}
-
-pub struct Bernoulli {
-    pub dist: rd::Bernoulli,
-    pub p: f64,
-}
-
-impl PrimitiveDistribution<bool> for Bernoulli {
-    fn _raw_sample(&self) -> bool {
-        rd::Distribution::sample(&self.dist, &mut thread_rng())
-    }
-    fn log_probability_density(&self, value: &bool) -> f64 {
-        match value {
-            true => self.p.log2(),
-            false => (1. - self.p).log2(),
-        }
-    }
-
-    fn kernel_propose(&self, _prior: &bool) -> Sample<bool> {
-        self.sample()
-    }
-
-    fn parametrized_value(&self, value: bool) -> ParametrizedValue {
-        ParametrizedValue::Bernoulli { value, p: self.p }
-    }
-}
-
-pub struct Uniform {
-    pub dist: rd::Uniform<f64>,
-    pub from: f64,
-    pub to: f64,
-}
-
-impl PrimitiveDistribution<f64> for Uniform {
-    fn _raw_sample(&self) -> f64 {
-        rd::Distribution::sample(&self.dist, &mut thread_rng())
-    }
-
-    fn log_probability_density(&self, value: &f64) -> f64 {
-        if &self.from < value && value <= &self.to {
-            -((self.to - self.from).log2())
-        } else {
-            f64::NEG_INFINITY
-        }
-    }
-
-    fn kernel_propose(&self, _prior: &f64) -> Sample<f64> {
-        self.sample()
-    }
-
-    fn parametrized_value(&self, value: f64) -> ParametrizedValue {
-        ParametrizedValue::Uniform {
-            value,
-            from: self.from,
-            to: self.to,
-        }
-    }
-}
-
-pub fn bernoulli(p: f64) -> Bernoulli {
-    Bernoulli {
-        dist: rd::Bernoulli::new(p).unwrap(),
-        p,
-    }
-}
-
-pub fn uniform(from: f64, to: f64) -> Uniform {
-    Uniform {
-        dist: rd::Uniform::new(from, to),
-        from,
-        to,
     }
 }
