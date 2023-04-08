@@ -17,3 +17,4 @@
 - Can we also refactor the `prob` functions themselves? I.e. instead of passing around `&mut` traces, sampling from a `prob` function (or primitive) returns a trace, which then is integrated into the current trace. 
 - Are we correctly tracing (-> path!) sampling inside a `while` loop's condition? E.g. `while sample!(bernoulli(0.5)) { ... }` should be traced like `loop {if ! sample!(bernoulli(0.5)) {break;}`
 - `smooth_condition!` / `sc!`, e.g. `sc!(x > 0)` is closer to probability 1 the futher positive x is, and closer to probability 0 the further negative x is. Is there some general, objectively most sensible way to do this? Can we handle `sc!(x > 0 && y < 0)`?
+- Add lifetime handling of immutable references to macros. Easiest option would be just to require explicit annotation of all lifetimes of passed in references, and then add all lifetimes to the return type `impl FnProb<...> + 'a + 'b + 'c`.

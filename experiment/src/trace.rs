@@ -1,9 +1,11 @@
-//! An attempt to develop a better trace structure optimized for immutable
-//! tracing.
+use std::{collections::BTreeMap, fmt, ops::AddAssign};
 
-use std::{collections::BTreeMap, ops::AddAssign};
+use rand::{thread_rng, Rng};
 
-use crate::new_structure2::Sample;
+use crate::{
+    new_structure2::{PrimitiveDistribution, Proposal, Sample},
+    primitive::{bernoulli, uniform},
+};
 
 #[derive(Debug, Clone)]
 pub enum ParametrizedValue {
@@ -11,10 +13,38 @@ pub enum ParametrizedValue {
     Uniform { value: f64, from: f64, to: f64 },
 }
 
+impl fmt::Display for ParametrizedValue {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ParametrizedValue::Bernoulli { value, p } => {
+                write!(f, "bernoulli({}) => {}", p, value)
+            }
+            ParametrizedValue::Uniform { value, from, to } => {
+                write!(f, "uniform({},{}) => {}", from, to, value)
+            }
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct TraceEntry {
     pub sample: Sample<ParametrizedValue>,
     pub touched: bool,
+}
+
+impl TraceEntry {
+    pub fn propose(&self) -> Proposal {
+        match &self.sample.value {
+            ParametrizedValue::Bernoulli { value, p } => {
+                let dist = bernoulli(*p);
+                dist.propose(value)
+            }
+            ParametrizedValue::Uniform { value, from, to } => {
+                let dist = uniform(*from, *to);
+                dist.propose(value)
+            }
+        }
+    }
 }
 
 impl TraceEntry {
@@ -37,12 +67,27 @@ impl From<Sample<ParametrizedValue>> for TraceEntry {
         }
     }
 }
+impl fmt::Display for TraceEntry {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.sample)
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum TraceDirectory {
     Function(String),
     Recursion,
     Loop(usize),
+}
+
+impl fmt::Display for TraceDirectory {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TraceDirectory::Function(n) => write!(f, "{}", n),
+            TraceDirectory::Recursion => write!(f, "."),
+            TraceDirectory::Loop(c) => write!(f, "@{}", c),
+        }
+    }
 }
 
 pub type TracePath = Vec<TraceDirectory>;
@@ -108,6 +153,38 @@ impl Trace {
             t.clean();
         }
     }
+
+    pub fn random_variable<'a>(&'a mut self) -> Option<&'a mut TraceEntry> {
+        // This could be more efficiently if we add some stuff, like for a first
+        // step a counter for the total number of variables below a certain
+        // trace node, but this should be good enough for now.
+
+        let mut vars: Vec<_> = self.iter_mut().collect();
+        if vars.is_empty() {
+            None
+        } else {
+            let n = thread_rng().gen_range(0..vars.len());
+            Some(vars.swap_remove(n))
+        }
+    }
+
+    pub fn iter<'a>(&'a self) -> Box<dyn Iterator<Item = &'a TraceEntry> + 'a> {
+        Box::new(
+            self.variables
+                .iter()
+                .chain(self.directories.iter().flat_map(|(_, t)| t.iter())),
+        )
+    }
+
+    pub fn iter_mut<'a>(
+        &'a mut self,
+    ) -> Box<dyn Iterator<Item = &'a mut TraceEntry> + 'a> {
+        Box::new(
+            self.variables.iter_mut().chain(
+                self.directories.iter_mut().flat_map(|(_, t)| t.iter_mut()),
+            ),
+        )
+    }
 }
 
 impl AddAssign for Trace {
@@ -116,6 +193,42 @@ impl AddAssign for Trace {
         for (d, t) in rhs.directories {
             self.attach(d, t);
         }
+    }
+}
+
+impl IntoIterator for Trace {
+    type Item = TraceEntry;
+
+    type IntoIter = Box<dyn Iterator<Item = Self::Item>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        Box::new(
+            self.variables.into_iter().chain(
+                self.directories
+                    .into_iter()
+                    .flat_map(|(_, t)| t.into_iter()),
+            ),
+        )
+    }
+}
+
+impl<'a> IntoIterator for &'a Trace {
+    type Item = &'a TraceEntry;
+
+    type IntoIter = Box<dyn Iterator<Item = Self::Item> + 'a>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a mut Trace {
+    type Item = &'a mut TraceEntry;
+
+    type IntoIter = Box<dyn Iterator<Item = Self::Item> + 'a>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter_mut()
     }
 }
 
@@ -130,5 +243,45 @@ impl From<TraceEntry> for Trace {
 impl From<Sample<ParametrizedValue>> for Trace {
     fn from(sample: Sample<ParametrizedValue>) -> Self {
         TraceEntry::new(sample.value, sample.log_likelihood).into()
+    }
+}
+
+impl fmt::Display for Trace {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "│")?;
+        {
+            let mut iter = self.variables.iter();
+            let mut next = iter.next();
+            while let Some(v) = next {
+                next = iter.next();
+                if next.is_some() || !self.directories.is_empty() {
+                    writeln!(f, "├─ {}", v)?;
+                } else {
+                    writeln!(f, "╰─ {}", v)?;
+                }
+            }
+        }
+        {
+            let mut iter = self.directories.iter();
+            let mut next = iter.next();
+            while let Some((d, t)) = next {
+                next = iter.next();
+                writeln!(f, "│")?;
+                if next.is_some() {
+                    writeln!(f, "├── {}", d)?;
+                } else {
+                    writeln!(f, "╰── {}", d)?;
+                }
+                let ts = format!("{}", t);
+                for l in ts.lines() {
+                    if next.is_some() {
+                        writeln!(f, "│   {}", l)?;
+                    } else {
+                        writeln!(f, "    {}", l)?;
+                    }
+                }
+            }
+        }
+        Ok(())
     }
 }
