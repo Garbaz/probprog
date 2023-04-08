@@ -12,5 +12,6 @@ pub fn sample(input: pm::TokenStream) -> pm::TokenStream {
             &mut __log_likelihood,
             #expr,
         )
-    }.into()
+    }
+    .into()
 }

@@ -10,7 +10,7 @@ pub struct Sample<T> {
 
 impl<T: fmt::Display> fmt::Display for Sample<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} : {:.3}", self.value, self.log_likelihood)
+        write!(f, "{} : {:.3}", self.value, self.log_likelihood.exp2())
     }
 }
 

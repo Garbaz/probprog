@@ -13,10 +13,7 @@ impl Parse for ObserveArgs {
         if let (Some(v), Some(d)) = (exprs.pop(), exprs.pop()) {
             Ok(Self(d.into_value(), v.into_value()))
         } else {
-            Err(Error::new(
-                input.span(),
-                "expected `distribution, value`",
-            ))
+            Err(Error::new(input.span(), "expected `distribution, value`"))
         }
     }
 }
@@ -24,7 +21,7 @@ impl Parse for ObserveArgs {
 pub fn observe(input: pm::TokenStream) -> pm::TokenStream {
     let ObserveArgs(expr_distribution, expr_value) =
         parse_macro_input!(input as ObserveArgs);
-    
+
     quote! {
         probprog::__internal::observe(
             &mut __log_likelihood,

@@ -26,7 +26,7 @@ pub fn condition<T: Clone, D: PrimitiveDistribution<T>>(
     log_likelihood: &mut f64,
     predicate: bool,
 ) {
-    if ! predicate {
+    if !predicate {
         *log_likelihood = f64::NEG_INFINITY
     }
 }

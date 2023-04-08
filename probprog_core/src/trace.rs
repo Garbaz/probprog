@@ -94,8 +94,8 @@ pub type TracePath = Vec<TraceDirectory>;
 
 #[derive(Debug, Clone)]
 pub struct Trace {
-    directories: BTreeMap<TraceDirectory, Trace>,
-    variables: Vec<TraceEntry>,
+    pub directories: BTreeMap<TraceDirectory, Trace>,
+    pub variables: Vec<TraceEntry>,
 }
 
 impl Trace {
@@ -160,6 +160,7 @@ impl Trace {
         // trace node, but this should be good enough for now.
 
         let mut vars: Vec<_> = self.iter_mut().collect();
+        println!("{:?}", vars);
         if vars.is_empty() {
             None
         } else {

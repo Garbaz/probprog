@@ -1,6 +1,8 @@
+use probprog::distribution::Distribution;
 use probprog::inference::metropolis_hastings;
 use probprog::primitive::{bernoulli, uniform};
-use probprog::{o, s, prob};
+use probprog::trace::Trace;
+use probprog::{o, prob, s};
 
 #[prob]
 fn example3(obs: Vec<bool>) -> f64 {
@@ -14,17 +16,26 @@ fn example3(obs: Vec<bool>) -> f64 {
 }
 
 fn main() {
-    const N: usize = 10000;
-    let burn_in = N / 2;
-    let gen =
-        metropolis_hastings(example3(vec![true, false, true, false, true, false]));
+    let mut trace = Trace::new();
+    example3(vec![true, false])(&mut trace);
+    println!("{}", trace);
+    println!("{}", example3(vec![true, false]).sample().trace);
+    metropolis_hastings(example3(vec![true, false]))
+        .take(3)
+        .last();
 
-    let avg: f64 = gen
-        .skip(burn_in)
-        .take(N)
-        .map(|s| (s.value as f64) / (N as f64))
-        .sum();
-    println!("{}", avg);
+    // const N: usize = 4;
+    // let burn_in = N / 2;
+    // let gen = metropolis_hastings(example3(vec![
+    //     true, false, true, false, true, false,
+    // ]));
+
+    // let avg: f64 = gen
+    //     .skip(burn_in)
+    //     .take(N)
+    //     .map(|s| (s.value as f64) / (N as f64))
+    //     .sum();
+    // println!("{}", avg);
 
     // let gen = mh(t4(0.33));
     // const N: usize = 1000;

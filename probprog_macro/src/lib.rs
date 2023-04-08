@@ -2,9 +2,9 @@ extern crate proc_macro;
 use proc_macro as pm;
 
 mod condition;
+mod observe;
 mod prob;
 mod sample;
-mod observe;
 
 #[proc_macro_attribute]
 pub fn prob(attrs: pm::TokenStream, input: pm::TokenStream) -> pm::TokenStream {
@@ -22,12 +22,12 @@ pub fn s(input: pm::TokenStream) -> pm::TokenStream {
 }
 
 #[proc_macro]
-pub fn observe(input : pm::TokenStream) -> pm::TokenStream {
+pub fn observe(input: pm::TokenStream) -> pm::TokenStream {
     observe::observe(input)
 }
 
 #[proc_macro]
-pub fn o(input : pm::TokenStream) -> pm::TokenStream {
+pub fn o(input: pm::TokenStream) -> pm::TokenStream {
     observe::observe(input)
 }
 

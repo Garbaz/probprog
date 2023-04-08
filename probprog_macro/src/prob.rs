@@ -26,6 +26,7 @@ pub fn prob(
 
     // bump_returns(block);
 
+    // println!("{}", func.clone().into_token_stream().to_string());
 
     func.into_token_stream().into()
 }
@@ -44,7 +45,8 @@ fn return_type(func_output: &mut ReturnType) -> Type {
 
     let new_return_type = parse2(quote! {
         impl ::probprog::distribution::FnProb<#orig_func_output>
-    }).unwrap();
+    })
+    .unwrap();
 
     *func_output = ReturnType::Type(rarrow, Box::new(new_return_type));
 
