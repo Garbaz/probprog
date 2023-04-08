@@ -5,7 +5,7 @@ use quote::{quote, ToTokens};
 use syn::{
     parse2, parse_macro_input,
     visit_mut::{self, VisitMut},
-    Block, Expr, ExprReturn, ItemFn, ReturnType, Token,
+    Block, Expr, ItemFn, ReturnType, Token, Type,
 };
 
 pub fn prob(
@@ -14,83 +14,75 @@ pub fn prob(
 ) -> pm::TokenStream {
     let mut func = parse_macro_input!(input as ItemFn);
 
-    func.sig.output = probfunc_return_type(func.sig.output);
+    let original_return_type = return_type(&mut func.sig.output);
 
-    let block = *func.block;
+    let block = func.block.as_mut();
 
-    let block = add_func_tracing(block, &func.sig.ident);
+    loop_descend(block);
 
-    let block = add_loop_tracing(block);
+    sample_wrap(block, &func.sig.ident);
 
-    let block = bump_returns(block);
+    closure_wrap(block, &original_return_type);
 
-    let block = probfunc_block(block);
+    // bump_returns(block);
 
-    func.block = Box::new(block);
 
     func.into_token_stream().into()
 }
 
 /// Construct the new return type of the function. If it before was `f64`, it
-/// now is `ProbFunc<f64, impl Fn(&mut TracingPathRec, &mut TracingData) -> f64>`.
-fn probfunc_return_type(input: ReturnType) -> ReturnType {
+/// now is `impl FnProb<f64>`.
+fn return_type(func_output: &mut ReturnType) -> Type {
     let mut rarrow = Token![->](Span::call_site());
-    let orig_func_output = match input {
-        ReturnType::Default => quote! {()},
+    let orig_func_output = match func_output.clone() {
+        ReturnType::Default => parse2(quote! {()}).unwrap(),
         ReturnType::Type(a, t) => {
             rarrow = a;
-            t.into_token_stream()
+            t
         }
     };
 
-    let new_func_output = quote! {
-        ::probprog::__internal::probfunc::ProbFunc<(#orig_func_output),
-            impl ::probprog::__internal::probfunc::ProbFn<#orig_func_output>>
-    }
-    .into();
+    let new_return_type = parse2(quote! {
+        impl probprog::distribution::FnProb<#orig_func_output>
+    }).unwrap();
 
-    // We should be able to just unwrap here without a chance for error.
-    let new_func_output = parse2(new_func_output).unwrap();
+    *func_output = ReturnType::Type(rarrow, Box::new(new_return_type));
 
-    ReturnType::Type(rarrow, Box::new(new_func_output))
+    *orig_func_output
 }
 
 /// Construct the new function body. If it before was `{17.29}`, it now is
-/// `{ProbFunc::new(move |...| {17.29})}`.
-fn probfunc_block(input: Block) -> Block {
-    let old_func_block = input.into_token_stream();
-    // let old_func_block_span = old_func_block.span();
-    let new_func_block = quote! {
+/// `{move |trace : &mut Trace| -> Sample<f64> {17.29})}`.
+fn closure_wrap(block: &mut Block, original_return_type: &Type) {
+    *block = parse2(quote! {
         {
-            ::probprog::__internal::probfunc::ProbFunc::new(
-                move | __probprog_tracing_path: &mut ::probprog::__internal::tracingpath::TracingPathRec,
-                       __probprog_tracing_data: &mut ::probprog::__internal::trace::TracingData |
-                    {
-                        ::std::result::Result::Ok(#old_func_block)
-                    }
-            )
+            move |__trace: &mut Trace| -> Sample<(#original_return_type)> {
+            #block
+            }
         }
-    }.into();
-
-    // We should be able to just unwrap here without a chance for error.
-    let new_func_block = parse2(new_func_block).unwrap();
-    new_func_block
+    }).unwrap()
 }
 
-fn add_func_tracing(input: Block, funcname: &Ident) -> Block {
-    let funcname = &funcname.to_string()[..];
-    parse2(quote! {
-        {   let mut __probprog_tracing_path =
-                __probprog_tracing_path.descend_function(#funcname);
-            #input
+fn sample_wrap(block: &mut Block, funcname: &Ident) {
+    let funcname = funcname.to_string();
+    *block = parse2(quote! {
+        {
+            let __trace = __trace.descend(TraceDirectory::Function(#funcname.to_string()));
+            let mut __log_likelihood = 0.;
+            let value = (|| {
+                #block
+            })();
+            Sample {
+                value,
+                log_likelihood: __log_likelihood,
+            }
         }
     })
     .unwrap()
 }
 
-fn add_loop_tracing(mut input: Block) -> Block {
-    TackOnLoopTracing.visit_block_mut(&mut input);
-    input
+fn loop_descend(input: &mut Block) {
+    TackOnLoopTracing.visit_block_mut(input);
 }
 
 struct TackOnLoopTracing;
@@ -100,72 +92,70 @@ impl VisitMut for TackOnLoopTracing {
         match i {
             Expr::ForLoop(l) => {
                 self.visit_block_mut(&mut l.body);
-                l.body = tack_on_increment_loop(&l.body);
-                // We should be able to just unwrap here without a chance for error.
-                *i = parse2(tack_on_descend_loop(i.into_token_stream()))
-                    .unwrap();
+                l.body = tack_onto_loop_body(&l.body);
+                *i =
+                    parse2(tack_onto_loop_expr(i.into_token_stream())).unwrap();
             }
             Expr::Loop(l) => {
                 self.visit_block_mut(&mut l.body);
-                l.body = tack_on_increment_loop(&l.body);
-                // We should be able to just unwrap here without a chance for error.
-                *i = parse2(tack_on_descend_loop(i.into_token_stream()))
-                    .unwrap();
+                l.body = tack_onto_loop_body(&l.body);
+                *i =
+                    parse2(tack_onto_loop_expr(i.into_token_stream())).unwrap();
             }
             Expr::While(l) => {
                 self.visit_block_mut(&mut l.body);
-                l.body = tack_on_increment_loop(&l.body);
-                // We should be able to just unwrap here without a chance for error.
-                *i = parse2(tack_on_descend_loop(i.into_token_stream()))
-                    .unwrap();
+                l.body = tack_onto_loop_body(&l.body);
+                *i =
+                    parse2(tack_onto_loop_expr(i.into_token_stream())).unwrap();
             }
             _ => visit_mut::visit_expr_mut(self, i),
         };
     }
 }
 
-fn tack_on_descend_loop(input: TokenStream) -> TokenStream {
-    quote! {
-        {
-            let mut __probprog_tracing_path =
-                __probprog_tracing_path.descend_loop();
-
-            #input
-        }
-    }
-}
-
-fn tack_on_increment_loop(input: &Block) -> Block {
+fn tack_onto_loop_body(input: &Block) -> Block {
     // We should be able to just unwrap here without a chance for error.
     parse2(quote! {
         {
-            let __probprog_loop_result = #input;
-            __probprog_tracing_path.increment_loop();
-            __probprog_loop_result
+            let __trace = __trace.descend(TraceDirectory::Loop(__loop_counter));
+            let value = {
+                #input
+            };
+            __loop_counter += 1;
+            value
         }
     })
     .unwrap()
 }
 
-fn bump_returns(mut input: Block) -> Block {
-    BumpReturns.visit_block_mut(&mut input);
-    input
-}
-
-struct BumpReturns;
-
-impl VisitMut for BumpReturns {
-    fn visit_expr_return_mut(&mut self, i: &mut ExprReturn) {
-        let new_expr = if let Some(e) = &i.expr {
-            quote! {
-                Ok(#e)
-            }
-        } else {
-            quote! {
-                Ok(())
-            }
-        };
-
-        i.expr = Some(parse2(new_expr).unwrap());
+fn tack_onto_loop_expr(input: TokenStream) -> TokenStream {
+    quote! {
+        {
+            let mut __loop_counter: usize = 0;
+            #input
+        }
     }
 }
+
+// fn bump_returns(mut input: Block) -> Block {
+//     BumpReturns.visit_block_mut(&mut input);
+//     input
+// }
+
+// struct BumpReturns;
+
+// impl VisitMut for BumpReturns {
+//     fn visit_expr_return_mut(&mut self, i: &mut ExprReturn) {
+//         let new_expr = if let Some(e) = &i.expr {
+//             quote! {
+//                 Ok(#e)
+//             }
+//         } else {
+//             quote! {
+//                 Ok(())
+//             }
+//         };
+
+//         i.expr = Some(parse2(new_expr).unwrap());
+//     }
+// }

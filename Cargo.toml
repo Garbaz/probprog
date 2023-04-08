@@ -1,9 +1,3 @@
 [workspace]
 
-members = [
-    "probprog",
-    "probprog_core",
-    "probprog_macro",
-    "probprog_sandbox",
-    "experiment"
-]
+members = ["probprog", "probprog_core", "probprog_macro", "probprog_sandbox"]

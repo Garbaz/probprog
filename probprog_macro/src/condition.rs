@@ -1,14 +1,16 @@
-
 use proc_macro as pm;
-use proc_macro2::TokenStream;
 use quote::quote;
+use syn::{parse_macro_input, Expr};
 
-pub fn condition(input : pm::TokenStream) -> pm::TokenStream {
-    let input : TokenStream = input.into();
-    let input_str = input.to_string();
+pub fn condition(input: pm::TokenStream) -> pm::TokenStream {
+    let expr = parse_macro_input!(input as Expr);
+
     quote! {
-        if ! (#input) {
-            return ::std::result::Result::Err(::probprog::__internal::probfunc::ConditionError::new(#input_str));
-        } 
-    }.into()
+        probprog::__internal::sample(
+            __trace,
+            &mut __log_likelihood,
+            #expr,
+        )
+    }
+    .into()
 }

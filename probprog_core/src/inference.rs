@@ -1,4 +1,4 @@
-use crate::new_structure2::{Distribution, FnProb, Sample, TracedSample};
+use crate::distribution::{Distribution, FnProb, Sample, TracedSample};
 
 struct MH<T, F: FnProb<T>> {
     probfunc: F,

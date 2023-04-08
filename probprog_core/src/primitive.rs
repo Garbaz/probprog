@@ -10,7 +10,7 @@ pub fn uniform(from: f64, to: f64) -> Uniform {
 
 pub mod distribution {
     use crate::{
-        new_structure2::PrimitiveDistribution, trace::ParametrizedValue,
+        distribution::PrimitiveDistribution, trace::ParametrizedValue,
     };
 
     use rand::thread_rng;

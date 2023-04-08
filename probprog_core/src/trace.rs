@@ -3,7 +3,7 @@ use std::{collections::BTreeMap, fmt, ops::AddAssign};
 use rand::{thread_rng, Rng};
 
 use crate::{
-    new_structure2::{PrimitiveDistribution, Proposal, Sample},
+    distribution::{PrimitiveDistribution, Proposal, Sample},
     primitive::{bernoulli, uniform},
 };
 
@@ -76,15 +76,15 @@ impl fmt::Display for TraceEntry {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum TraceDirectory {
     Function(String),
-    Recursion,
     Loop(usize),
+    // Recursion,
 }
 
 impl fmt::Display for TraceDirectory {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             TraceDirectory::Function(n) => write!(f, "{}", n),
-            TraceDirectory::Recursion => write!(f, "."),
+            // TraceDirectory::Recursion => write!(f, "."),
             TraceDirectory::Loop(c) => write!(f, "@{}", c),
         }
     }

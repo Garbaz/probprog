@@ -74,15 +74,15 @@ pub trait PrimitiveDistribution<T: Clone> {
 
     fn parametrized(&self, value: T) -> ParametrizedValue;
 
-    fn observe(&self, trace: &mut Trace, value: T) -> f64 {
-        let log_likelihood =self.log_likelihood(&value); 
-        trace.push(
+    fn observe(&self, /* trace: &mut Trace,  */ value: &T) -> f64 {
+        let log_likelihood = self.log_likelihood(value);
+        /* trace.push(
             Sample {
                 value: self.parametrized(value),
                 log_likelihood,
             }
             .into(),
-        );
+        ); */
         log_likelihood
     }
 }
@@ -101,7 +101,13 @@ impl<T: Clone, D: PrimitiveDistribution<T>>
     fn resample(&self, trace: &mut Trace) -> Sample<T> {
         let value = self.raw_sample();
         let log_likelihood = self.log_likelihood(&value);
-        self.observe(trace, value.clone());
+        trace.push(
+            Sample {
+                value: self.parametrized(value.clone()),
+                log_likelihood,
+            }
+            .into(),
+        );
         Sample {
             value,
             log_likelihood,

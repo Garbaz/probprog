@@ -4,12 +4,12 @@ use proc_macro as pm;
 mod condition;
 mod prob;
 mod sample;
+mod observe;
 
 #[proc_macro_attribute]
 pub fn prob(attrs: pm::TokenStream, input: pm::TokenStream) -> pm::TokenStream {
     prob::prob(attrs, input)
 }
-
 
 #[proc_macro]
 pub fn sample(input: pm::TokenStream) -> pm::TokenStream {
@@ -19,6 +19,16 @@ pub fn sample(input: pm::TokenStream) -> pm::TokenStream {
 #[proc_macro]
 pub fn s(input: pm::TokenStream) -> pm::TokenStream {
     sample::sample(input)
+}
+
+#[proc_macro]
+pub fn observe(input : pm::TokenStream) -> pm::TokenStream {
+    observe::observe(input)
+}
+
+#[proc_macro]
+pub fn o(input : pm::TokenStream) -> pm::TokenStream {
+    observe::observe(input)
 }
 
 #[proc_macro]
