@@ -43,7 +43,7 @@ fn return_type(func_output: &mut ReturnType) -> Type {
     };
 
     let new_return_type = parse2(quote! {
-        impl probprog::distribution::FnProb<#orig_func_output>
+        impl ::probprog::distribution::FnProb<#orig_func_output>
     }).unwrap();
 
     *func_output = ReturnType::Type(rarrow, Box::new(new_return_type));
@@ -56,7 +56,7 @@ fn return_type(func_output: &mut ReturnType) -> Type {
 fn closure_wrap(block: &mut Block, original_return_type: &Type) {
     *block = parse2(quote! {
         {
-            move |__trace: &mut Trace| -> Sample<(#original_return_type)> {
+            move |__trace: &mut ::probprog::trace::Trace| -> ::probprog::distribution::Sample<(#original_return_type)> {
             #block
             }
         }
@@ -67,12 +67,12 @@ fn sample_wrap(block: &mut Block, funcname: &Ident) {
     let funcname = funcname.to_string();
     *block = parse2(quote! {
         {
-            let __trace = __trace.descend(TraceDirectory::Function(#funcname.to_string()));
+            let __trace = __trace.descend(::probprog::trace::TraceDirectory::Function(#funcname.to_string()));
             let mut __log_likelihood = 0.;
             let value = (|| {
                 #block
             })();
-            Sample {
+            ::probprog::distribution::Sample {
                 value,
                 log_likelihood: __log_likelihood,
             }
@@ -117,7 +117,7 @@ fn tack_onto_loop_body(input: &Block) -> Block {
     // We should be able to just unwrap here without a chance for error.
     parse2(quote! {
         {
-            let __trace = __trace.descend(TraceDirectory::Loop(__loop_counter));
+            let __trace = __trace.descend(::probprog::trace::TraceDirectory::Loop(__loop_counter));
             let value = {
                 #input
             };
