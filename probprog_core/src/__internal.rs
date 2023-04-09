@@ -8,9 +8,9 @@ pub fn sample<T, _Tag, D: Distribution<_Tag, T>>(
     log_likelihood: &mut f64,
     distribution: D,
 ) -> T {
-    let s = distribution.resample(trace);
-    *log_likelihood += s.log_likelihood;
-    s.value
+    let sample = distribution.resample(trace);
+    *log_likelihood += sample.log_likelihood;
+    sample.value
 }
 
 pub fn observe<T: Clone, D: PrimitiveDistribution<T>>(

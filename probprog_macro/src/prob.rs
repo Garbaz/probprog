@@ -20,7 +20,7 @@ pub fn prob(
 
     loop_descend(block);
 
-    sample_wrap(block, &func.sig.ident);
+    sample_wrap(block, &func.sig.ident, &original_return_type);
 
     closure_wrap(block, &original_return_type);
 
@@ -58,22 +58,25 @@ fn return_type(func_output: &mut ReturnType) -> Type {
 fn closure_wrap(block: &mut Block, original_return_type: &Type) {
     *block = parse2(quote! {
         {
-            move |__trace: &mut ::probprog::trace::Trace| -> ::probprog::distribution::Sample<(#original_return_type)> {
-            #block
-            }
+            move |__trace: &mut ::probprog::trace::Trace| -> ::probprog::distribution::Sample<#original_return_type>
+                #block
         }
     }).unwrap()
 }
 
-fn sample_wrap(block: &mut Block, funcname: &Ident) {
+fn sample_wrap(
+    block: &mut Block,
+    funcname: &Ident,
+    original_return_type: &Type,
+) {
     let funcname = funcname.to_string();
     *block = parse2(quote! {
         {
             let __trace = __trace.descend(::probprog::trace::TraceDirectory::Function(#funcname.to_string()));
             let mut __log_likelihood = 0.;
-            let value = (|| {
+            let value = (|| -> #original_return_type
                 #block
-            })();
+            )();
             ::probprog::distribution::Sample {
                 value,
                 log_likelihood: __log_likelihood,
@@ -115,14 +118,12 @@ impl VisitMut for TackOnLoopTracing {
     }
 }
 
-fn tack_onto_loop_body(input: &Block) -> Block {
+fn tack_onto_loop_body(block: &Block) -> Block {
     // We should be able to just unwrap here without a chance for error.
     parse2(quote! {
         {
             let __trace = __trace.descend(::probprog::trace::TraceDirectory::Loop(__loop_counter));
-            let value = {
-                #input
-            };
+            let value = #block;
             __loop_counter += 1;
             value
         }
@@ -130,11 +131,11 @@ fn tack_onto_loop_body(input: &Block) -> Block {
     .unwrap()
 }
 
-fn tack_onto_loop_expr(input: TokenStream) -> TokenStream {
+fn tack_onto_loop_expr(loop_expr: TokenStream) -> TokenStream {
     quote! {
         {
             let mut __loop_counter: usize = 0;
-            #input
+            #loop_expr
         }
     }
 }

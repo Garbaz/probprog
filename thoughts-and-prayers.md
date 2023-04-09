@@ -18,3 +18,5 @@
 - Are we correctly tracing (-> path!) sampling inside a `while` loop's condition? E.g. `while sample!(bernoulli(0.5)) { ... }` should be traced like `loop {if ! sample!(bernoulli(0.5)) {break;}`
 - `smooth_condition!` / `sc!`, e.g. `sc!(x > 0)` is closer to probability 1 the futher positive x is, and closer to probability 0 the further negative x is. Is there some general, objectively most sensible way to do this? Can we handle `sc!(x > 0 && y < 0)`?
 - Add lifetime handling of immutable references to macros. Easiest option would be just to require explicit annotation of all lifetimes of passed in references, and then add all lifetimes to the return type `impl FnProb<...> + 'a + 'b + 'c`.
+- Refactor `ParametrizedValue` into struct with `dyn ...`. Ideally, we would only have to implement the right traits for some primitive distribution and then it can be packaged up. Though I'm not 100% whether that's possible with the current `dyn` constraints.
+- Multiple chains!!

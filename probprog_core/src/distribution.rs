@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::trace::{ParametrizedValue, Trace};
+use crate::trace::{ParametrizedValue, Trace, TraceEntry};
 
 #[derive(Debug, Clone)]
 pub struct Sample<T> {
@@ -25,6 +25,13 @@ pub struct Proposal {
 pub struct TracedSample<T> {
     pub sample: Sample<T>,
     pub trace: Trace,
+}
+
+impl<T: fmt::Display> fmt::Display for TracedSample<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "{}", self.sample)?;
+        writeln!(f, "{}", self.trace)
+    }
 }
 
 pub trait Distribution<_Tag, T> {
@@ -62,7 +69,7 @@ pub trait PrimitiveDistribution<T: Clone> {
         let value = self.raw_sample();
         let sample = Sample {
             log_likelihood: self.log_likelihood(&value),
-            value: self.parametrized(value),
+            value: self.parametrize(value),
         };
 
         Proposal {
@@ -72,18 +79,11 @@ pub trait PrimitiveDistribution<T: Clone> {
         }
     }
 
-    fn parametrized(&self, value: T) -> ParametrizedValue;
+    fn parametrize(&self, value: T) -> ParametrizedValue;
+    fn deparametrize(&self, value: ParametrizedValue) -> Option<Sample<T>>;
 
-    fn observe(&self, /* trace: &mut Trace,  */ value: &T) -> f64 {
-        let log_likelihood = self.log_likelihood(value);
-        /* trace.push(
-            Sample {
-                value: self.parametrized(value),
-                log_likelihood,
-            }
-            .into(),
-        ); */
-        log_likelihood
+    fn observe(&self, value: &T) -> f64 {
+        self.log_likelihood(value)
     }
 }
 
@@ -99,11 +99,33 @@ impl<T: Clone, D: PrimitiveDistribution<T>>
     }
 
     fn resample(&self, trace: &mut Trace) -> Sample<T> {
+        if let Some(TraceEntry { sample, touched }) = trace.pop() {
+            if !touched {
+                if let Some(Sample {
+                    value,
+                    log_likelihood,
+                }) = self.deparametrize(sample.value)
+                {
+                    trace.push(
+                        Sample {
+                            value: self.parametrize(value.clone()),
+                            log_likelihood,
+                        }
+                        .into(),
+                    );
+                    return Sample {
+                        value,
+                        log_likelihood,
+                    };
+                }
+            }
+        }
+
         let value = self.raw_sample();
         let log_likelihood = self.log_likelihood(&value);
         trace.push(
             Sample {
-                value: self.parametrized(value.clone()),
+                value: self.parametrize(value.clone()),
                 log_likelihood,
             }
             .into(),

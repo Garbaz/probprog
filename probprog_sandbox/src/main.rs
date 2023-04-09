@@ -1,11 +1,16 @@
-use probprog::distribution::Distribution;
-use probprog::inference::metropolis_hastings;
-use probprog::primitive::{bernoulli, uniform};
-use probprog::trace::Trace;
-use probprog::{o, prob, s};
+use probprog::{bernoulli, inference, o, prob, s, uniform, distribution::Distribution};
 
 #[prob]
-fn example3(obs: Vec<bool>) -> f64 {
+fn forward(p: f64, n: usize) -> Vec<bool> {
+    let mut v = Vec::new();
+    for _ in 0..n {
+        v.push(s!(bernoulli(p)))
+    }
+    v
+}
+
+#[prob]
+fn backward(obs: Vec<bool>) -> f64 {
     let p = s!(uniform(0., 1.));
 
     for o in &obs {
@@ -15,14 +20,22 @@ fn example3(obs: Vec<bool>) -> f64 {
     p
 }
 
+
 fn main() {
-    let mut trace = Trace::new();
-    example3(vec![true, false])(&mut trace);
-    println!("{}", trace);
-    println!("{}", example3(vec![true, false]).sample().trace);
-    metropolis_hastings(example3(vec![true, false]))
-        .take(3)
-        .last();
+
+
+    let num_obs = 1000;
+    let p = 0.1;
+    let obs = forward(p, num_obs).sample().sample.value;
+
+    let num_samples = 1000;
+    let avg: f64 = inference(backward(obs))
+        .skip(num_samples / 2)
+        .take(num_samples)
+        .map(|s| s.value / (num_samples as f64))
+        .sum();
+    println!("Coin weight:");
+    println!("  real: {}, inferred: {}", p, avg);
 
     // const N: usize = 4;
     // let burn_in = N / 2;

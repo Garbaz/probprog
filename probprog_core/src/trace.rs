@@ -1,16 +1,22 @@
-use std::{collections::BTreeMap, fmt, ops::AddAssign};
+use std::{
+    collections::{BTreeMap, VecDeque},
+    fmt,
+    ops::AddAssign,
+};
 
 use rand::{thread_rng, Rng};
 
 use crate::{
+    bernoulli,
     distribution::{PrimitiveDistribution, Proposal, Sample},
-    primitive::{bernoulli, uniform},
+    normal, uniform,
 };
 
 #[derive(Debug, Clone)]
 pub enum ParametrizedValue {
     Bernoulli { value: bool, p: f64 },
     Uniform { value: f64, from: f64, to: f64 },
+    Normal { value: f64, mean: f64, std_dev: f64 },
 }
 
 impl fmt::Display for ParametrizedValue {
@@ -21,6 +27,13 @@ impl fmt::Display for ParametrizedValue {
             }
             ParametrizedValue::Uniform { value, from, to } => {
                 write!(f, "uniform({},{}) => {}", from, to, value)
+            }
+            ParametrizedValue::Normal {
+                value,
+                mean,
+                std_dev,
+            } => {
+                write!(f, "normal({},{}) => {}", mean, std_dev, value)
             }
         }
     }
@@ -33,8 +46,8 @@ pub struct TraceEntry {
 }
 
 impl TraceEntry {
-    pub fn propose(&self) -> Proposal {
-        match &self.sample.value {
+    pub fn propose(&mut self) -> Proposal {
+        let proposal = match &self.sample.value {
             ParametrizedValue::Bernoulli { value, p } => {
                 let dist = bernoulli(*p);
                 dist.propose(value)
@@ -43,7 +56,17 @@ impl TraceEntry {
                 let dist = uniform(*from, *to);
                 dist.propose(value)
             }
-        }
+            ParametrizedValue::Normal {
+                value,
+                mean,
+                std_dev,
+            } => {
+                let dist = normal(*mean, *std_dev);
+                dist.propose(value)
+            }
+        };
+        *self = proposal.sample.clone().into();
+        proposal
     }
 }
 
@@ -95,14 +118,14 @@ pub type TracePath = Vec<TraceDirectory>;
 #[derive(Debug, Clone)]
 pub struct Trace {
     pub directories: BTreeMap<TraceDirectory, Trace>,
-    pub variables: Vec<TraceEntry>,
+    pub variables: VecDeque<TraceEntry>,
 }
 
 impl Trace {
     pub fn new() -> Self {
         Self {
             directories: BTreeMap::new(),
-            variables: Vec::new(),
+            variables: VecDeque::new(),
         }
     }
 
@@ -118,8 +141,12 @@ impl Trace {
         }
     }
 
+    pub fn pop(&mut self) -> Option<TraceEntry> {
+        self.variables.pop_front()
+    }
+
     pub fn push(&mut self, trace_entry: TraceEntry) {
-        self.variables.push(trace_entry);
+        self.variables.push_back(trace_entry);
     }
 
     pub fn push_at(
@@ -146,21 +173,24 @@ impl Trace {
 
     pub fn clean(&mut self) {
         self.variables.retain(|e| e.touched);
+        for v in &mut self.variables {
+            v.touched = false;
+        }
+
         for t in self.directories.values_mut() {
-            for v in &mut t.variables {
-                v.touched = false;
-            }
             t.clean();
         }
+        self.directories.retain(|_, t| {
+            !(t.variables.is_empty() && t.directories.is_empty())
+        });
     }
 
-    pub fn random_variable<'a>(&'a mut self) -> Option<&'a mut TraceEntry> {
+    pub fn random_variable(&mut self) -> Option<&mut TraceEntry> {
         // This could be more efficiently if we add some stuff, like for a first
         // step a counter for the total number of variables below a certain
         // trace node, but this should be good enough for now.
 
         let mut vars: Vec<_> = self.iter_mut().collect();
-        println!("{:?}", vars);
         if vars.is_empty() {
             None
         } else {
