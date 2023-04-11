@@ -17,7 +17,9 @@ impl<T: fmt::Display> fmt::Display for Sample<T> {
 #[derive(Debug, Clone)]
 pub struct Proposal {
     pub sample: Sample<ParametrizedValue>,
+    /// P(new value | current value)
     pub forward_log_likelihood: f64,
+    /// P(current value | new value)
     pub backward_log_likelihood: f64,
 }
 

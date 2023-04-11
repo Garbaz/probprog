@@ -30,8 +30,13 @@ fn main() {
 
     let num_samples = 1000;
     let avg: f64 = inference(backward(obs))
-        .skip(num_samples / 2)
+        // Skip samples until we find a valid sample
+        .skip_while(|s| s.log_likelihood.is_infinite()) 
+        // Burn in the sampler to hopefully reach a stable point
+        .skip(num_samples / 2) 
+        // Take our samples 
         .take(num_samples)
+        // And average them
         .map(|s| s.value / (num_samples as f64))
         .sum();
     println!("Coin weight:");
