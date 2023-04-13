@@ -24,7 +24,7 @@ pub fn observe(input: pm::TokenStream) -> pm::TokenStream {
 
     quote! {
         probprog::__internal::observe(
-            &mut __log_likelihood,
+            &mut __log_probability,
             #expr_distribution,
             &(#expr_value),
         )

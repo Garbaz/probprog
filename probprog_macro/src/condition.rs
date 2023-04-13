@@ -8,7 +8,7 @@ pub fn condition(input: pm::TokenStream) -> pm::TokenStream {
     quote! {
         probprog::__internal::sample(
             __trace,
-            &mut __log_likelihood,
+            &mut __log_probability,
             #expr,
         )
     }

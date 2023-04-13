@@ -5,28 +5,28 @@ use crate::{
 
 pub fn sample<T, _Tag, D: Distribution<_Tag, T>>(
     trace: &mut Trace,
-    log_likelihood: &mut f64,
+    log_probability: &mut f64,
     distribution: D,
 ) -> T {
     let sample = distribution.resample(trace);
-    *log_likelihood += sample.log_likelihood;
+    *log_probability += sample.log_probability;
     sample.value
 }
 
 pub fn observe<T: Clone, D: PrimitiveDistribution<T>>(
     /* trace: &mut Trace, */
-    log_likelihood: &mut f64,
+    log_probability: &mut f64,
     distribution: D,
     value: &T,
 ) {
-    *log_likelihood += distribution.observe(value);
+    *log_probability += distribution.observe(value);
 }
 
 pub fn condition<T: Clone, D: PrimitiveDistribution<T>>(
-    log_likelihood: &mut f64,
+    log_probability: &mut f64,
     predicate: bool,
 ) {
     if !predicate {
-        *log_likelihood = f64::NEG_INFINITY
+        *log_probability = f64::NEG_INFINITY
     }
 }

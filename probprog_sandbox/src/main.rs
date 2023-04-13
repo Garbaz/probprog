@@ -31,7 +31,7 @@ fn main() {
     let num_samples = 1000;
     let avg: f64 = inference(backward(obs))
         // Skip samples until we find a valid sample
-        .skip_while(|s| s.log_likelihood.is_infinite()) 
+        .skip_while(|s| s.log_probability.is_infinite()) 
         // Burn in the sampler to hopefully reach a stable point
         .skip(num_samples / 2) 
         // Take our samples 
@@ -67,11 +67,11 @@ fn main() {
 
 // pub fn t4(p: f64) -> impl FnProb<usize> {
 //     move |__trace: &mut Trace| -> Sample<usize> {
-//         let mut __log_likelihood = 0.;
+//         let mut __log_probability = 0.;
 //         let value = (|| {
 //             let _q = {
 //                 let s = uniform(-1., 1.).resample(__trace);
-//                 __log_likelihood += s.log_likelihood;
+//                 __log_probability += s.log_probability;
 //                 s.value
 //             };
 
@@ -86,7 +86,7 @@ fn main() {
 //                     {
 //                         let x = {
 //                             let s = bernoulli(p).resample(__trace);
-//                             __log_likelihood += s.log_likelihood;
+//                             __log_probability += s.log_probability;
 //                             s.value
 //                         };
 
@@ -104,7 +104,7 @@ fn main() {
 
 //             let _p = {
 //                 let s = uniform(-2., 2.).resample(__trace);
-//                 __log_likelihood += s.log_likelihood;
+//                 __log_probability += s.log_probability;
 //                 s.value
 //             };
 
@@ -112,7 +112,7 @@ fn main() {
 //         })();
 //         Sample {
 //             value,
-//             log_likelihood: __log_likelihood,
+//             log_probability: __log_probability,
 //         }
 //     }
 // }

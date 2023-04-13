@@ -71,11 +71,11 @@ impl TraceEntry {
 }
 
 impl TraceEntry {
-    pub fn new(value: ParametrizedValue, log_likelihood: f64) -> Self {
+    pub fn new(value: ParametrizedValue, log_probability: f64) -> Self {
         Self {
             sample: Sample {
                 value,
-                log_likelihood,
+                log_probability,
             },
             touched: true,
         }
@@ -273,7 +273,7 @@ impl From<TraceEntry> for Trace {
 
 impl From<Sample<ParametrizedValue>> for Trace {
     fn from(sample: Sample<ParametrizedValue>) -> Self {
-        TraceEntry::new(sample.value, sample.log_likelihood).into()
+        TraceEntry::new(sample.value, sample.log_probability).into()
     }
 }
 

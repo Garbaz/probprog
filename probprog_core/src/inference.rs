@@ -42,15 +42,15 @@ impl<_Tag, T: Clone, D: Distribution<_Tag, T>> Iterator
             // println!("{:?}", proposal_sample);
             // println!("{}", trace);
 
-            let current_log_likelihood =
-                self.traced_sample.sample.log_likelihood;
-            let proposal_log_likelihood = proposal_result.log_likelihood;
-            let backward_log_likelihood = proposal.backward_log_likelihood;
-            let forward_log_likelihood = proposal.forward_log_likelihood;
+            let current_log_probability =
+                self.traced_sample.sample.log_probability;
+            let proposal_log_probability = proposal_result.log_probability;
+            let backward_log_probability = proposal.backward_log_probability;
+            let forward_log_probability = proposal.forward_log_probability;
 
             // The Metropoli-Hastings accept ratio
-            let score = (proposal_log_likelihood - current_log_likelihood)
-                + (backward_log_likelihood - forward_log_likelihood);
+            let score = (proposal_log_probability - current_log_probability)
+                + (backward_log_probability - forward_log_probability);
 
             if score > 0. || rand::random::<f64>().log2() < score {
                 self.traced_sample.sample = proposal_result;

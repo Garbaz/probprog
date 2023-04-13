@@ -24,7 +24,7 @@ impl PrimitiveDistribution<bool> for Bernoulli {
     fn raw_sample(&self) -> bool {
         rd::Distribution::sample(&self.dist, &mut thread_rng())
     }
-    fn log_likelihood(&self, value: &bool) -> f64 {
+    fn log_probability(&self, value: &bool) -> f64 {
         match value {
             true => self.p.log2(),
             false => (1. - self.p).log2(),
@@ -39,7 +39,7 @@ impl PrimitiveDistribution<bool> for Bernoulli {
         match value {
             ParametrizedValue::Bernoulli { value, .. } => Some(Sample {
                 value,
-                log_likelihood: self.log_likelihood(&value),
+                log_probability: self.log_probability(&value),
             }),
             _ => None,
         }
@@ -67,7 +67,7 @@ impl PrimitiveDistribution<f64> for Uniform {
         rd::Distribution::sample(&self.dist, &mut thread_rng())
     }
 
-    fn log_likelihood(&self, value: &f64) -> f64 {
+    fn log_probability(&self, value: &f64) -> f64 {
         if &self.from < value && value <= &self.to {
             -((self.to - self.from).log2())
         } else {
@@ -87,7 +87,7 @@ impl PrimitiveDistribution<f64> for Uniform {
         match value {
             ParametrizedValue::Uniform { value, .. } => Some(Sample {
                 value,
-                log_likelihood: self.log_likelihood(&value),
+                log_probability: self.log_probability(&value),
             }),
             _ => None,
         }
@@ -115,7 +115,7 @@ impl PrimitiveDistribution<f64> for Normal {
         rd::Distribution::sample(&self.dist, &mut thread_rng())
     }
 
-    fn log_likelihood(&self, value: &f64) -> f64 {
+    fn log_probability(&self, value: &f64) -> f64 {
         const LOG_TWO_PI_HALF: f64 = 1.3257480647361595;
         let vn = (value - self.mean) / self.std_dev;
         let a = -0.5 * std::f64::consts::LOG2_E * (vn * vn);
@@ -135,7 +135,7 @@ impl PrimitiveDistribution<f64> for Normal {
         match value {
             ParametrizedValue::Normal { value, .. } => Some(Sample {
                 value,
-                log_likelihood: self.log_likelihood(&value),
+                log_probability: self.log_probability(&value),
             }),
             _ => None,
         }

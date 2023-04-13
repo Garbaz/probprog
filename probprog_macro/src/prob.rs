@@ -73,13 +73,13 @@ fn sample_wrap(
     *block = parse2(quote! {
         {
             let __trace = __trace.descend(::probprog::trace::TraceDirectory::Function(#funcname.to_string()));
-            let mut __log_likelihood = 0.;
+            let mut __log_probability = 0.;
             let value = (|| -> #original_return_type
                 #block
             )();
             ::probprog::distribution::Sample {
                 value,
-                log_likelihood: __log_likelihood,
+                log_probability: __log_probability,
             }
         }
     })

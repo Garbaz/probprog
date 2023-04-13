@@ -5,22 +5,22 @@ use crate::trace::{ParametrizedValue, Trace, TraceEntry};
 #[derive(Debug, Clone)]
 pub struct Sample<T> {
     pub value: T,
-    pub log_likelihood: f64,
+    pub log_probability: f64,
 }
 
 impl<T: fmt::Display> fmt::Display for Sample<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} : {:.3}", self.value, self.log_likelihood.exp2())
+        write!(f, "{} : {:.3}", self.value, self.log_probability.exp2())
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct Proposal {
     pub sample: Sample<ParametrizedValue>,
-    /// P(new value | current value)
-    pub forward_log_likelihood: f64,
-    /// P(current value | new value)
-    pub backward_log_likelihood: f64,
+    /// P(proposed value | current value)
+    pub forward_log_probability: f64,
+    /// P(current value | proposed value)
+    pub backward_log_probability: f64,
 }
 
 #[derive(Debug, Clone)]
@@ -62,22 +62,22 @@ impl<T, F: FnProb<T>> Distribution<_TagFnProb, T> for F {
 pub trait PrimitiveDistribution<T: Clone> {
     fn raw_sample(&self) -> T;
 
-    fn log_likelihood(&self, value: &T) -> f64;
+    fn log_probability(&self, value: &T) -> f64;
 
-    /// The `forward_log_likelihood` is P(sample|prior) and the
-    /// `backward_log_likelihood` is P(prior|sample). By default this is just
+    /// The `forward_log_probability` is P(sample|prior) and the
+    /// `backward_log_probability` is P(prior|sample). By default this is just
     /// resampling from the distribution independent of the prior.
     fn propose(&self, prior: &T) -> Proposal {
         let value = self.raw_sample();
         let sample = Sample {
-            log_likelihood: self.log_likelihood(&value),
+            log_probability: self.log_probability(&value),
             value: self.parametrize(value),
         };
 
         Proposal {
-            forward_log_likelihood: sample.log_likelihood,
+            forward_log_probability: sample.log_probability,
+            backward_log_probability: self.log_probability(prior),
             sample,
-            backward_log_likelihood: self.log_likelihood(prior),
         }
     }
 
@@ -85,7 +85,7 @@ pub trait PrimitiveDistribution<T: Clone> {
     fn deparametrize(&self, value: ParametrizedValue) -> Option<Sample<T>>;
 
     fn observe(&self, value: &T) -> f64 {
-        self.log_likelihood(value)
+        self.log_probability(value)
     }
 }
 
@@ -105,36 +105,36 @@ impl<T: Clone, D: PrimitiveDistribution<T>>
             if !touched {
                 if let Some(Sample {
                     value,
-                    log_likelihood,
+                    log_probability,
                 }) = self.deparametrize(sample.value)
                 {
                     trace.push(
                         Sample {
                             value: self.parametrize(value.clone()),
-                            log_likelihood,
+                            log_probability,
                         }
                         .into(),
                     );
                     return Sample {
                         value,
-                        log_likelihood,
+                        log_probability,
                     };
                 }
             }
         }
 
         let value = self.raw_sample();
-        let log_likelihood = self.log_likelihood(&value);
+        let log_probability = self.log_probability(&value);
         trace.push(
             Sample {
                 value: self.parametrize(value.clone()),
-                log_likelihood,
+                log_probability,
             }
             .into(),
         );
         Sample {
             value,
-            log_likelihood,
+            log_probability,
         }
     }
 }
