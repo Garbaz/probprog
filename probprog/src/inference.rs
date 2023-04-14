@@ -32,19 +32,27 @@ impl<_Tag, T: Clone, D: Distribution<_Tag, T>> Iterator
         let mut trace = self.traced_sample.trace.clone();
 
         if let Some(wiggler) = trace.random_variable() {
+            // let a = wiggler.sample.log_probability;
+
             let proposal = wiggler.propose();
 
-            // println!("{} | {}", wiggler, proposal.sample);
+            // let b = wiggler.sample.log_probability;
+
+            // let n = trace.iter().count();
 
             let proposal_result = self.distribution.resample(&mut trace);
             trace.clean();
 
-            // println!("{:?}", proposal_sample);
-            // println!("{}", trace);
+            // let m = trace.iter().count();
 
             let current_log_probability =
                 self.traced_sample.sample.log_probability;
             let proposal_log_probability = proposal_result.log_probability;
+            // let current_log_probability = a;
+            // let proposal_log_probability = b;
+
+            // let correction = (n as f64).log2() - (m as f64).log2();
+
             let backward_log_probability = proposal.backward_log_probability;
             let forward_log_probability = proposal.forward_log_probability;
 

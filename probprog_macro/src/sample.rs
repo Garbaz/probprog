@@ -7,7 +7,7 @@ pub fn sample(input: pm::TokenStream) -> pm::TokenStream {
     let expr = parse_macro_input!(input as Expr);
 
     quote! {
-        probprog::__internal::sample(
+        ::probprog::__internal::sample(
             __trace,
             &mut __log_probability,
             #expr,
