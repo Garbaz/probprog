@@ -53,12 +53,12 @@ impl<_Tag, T: Clone, D: Distribution<_Tag, T>> Iterator
 
             // let correction = (n as f64).log2() - (m as f64).log2();
 
-            let backward_log_probability = proposal.backward_log_probability;
+            let reverse_log_probability = proposal.reverse_log_probability;
             let forward_log_probability = proposal.forward_log_probability;
 
             // The Metropoli-Hastings accept ratio
             let score = (proposal_log_probability - current_log_probability)
-                + (backward_log_probability - forward_log_probability);
+                + (reverse_log_probability - forward_log_probability);
 
             if score > 0. || rand::random::<f64>().log2() < score {
                 self.traced_sample.sample = proposal_result;

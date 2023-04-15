@@ -20,7 +20,7 @@ pub struct Proposal {
     /// P(proposed value | current value)
     pub forward_log_probability: f64,
     /// P(current value | proposed value)
-    pub backward_log_probability: f64,
+    pub reverse_log_probability: f64,
 }
 
 #[derive(Debug, Clone)]
@@ -64,8 +64,8 @@ pub trait PrimitiveDistribution<T: Clone> {
 
     fn log_probability(&self, value: &T) -> f64;
 
-    /// The `forward_log_probability` is P(sample|prior) and the
-    /// `backward_log_probability` is P(prior|sample). By default this is just
+    /// The `forward_log_probability` is P(proposal|prior) and the
+    /// `reverse_log_probability` is P(prior|proposal). By default this is just
     /// resampling from the distribution independent of the prior.
     fn propose(&self, prior: &T) -> Proposal {
         let value = self.raw_sample();
@@ -76,7 +76,7 @@ pub trait PrimitiveDistribution<T: Clone> {
 
         Proposal {
             forward_log_probability: sample.log_probability,
-            backward_log_probability: self.log_probability(prior),
+            reverse_log_probability: self.log_probability(prior),
             sample,
         }
     }

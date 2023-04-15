@@ -10,15 +10,15 @@ fn experiment0() {
         }
         v
     }
-    
+
     #[prob]
     fn backward(obs: Vec<bool>) -> f64 {
         let p = s!(uniform(0., 1.));
-    
+
         for o in &obs {
             o!(bernoulli(p), o);
         }
-    
+
         p
     }
 
@@ -60,14 +60,14 @@ fn experiment1() {
 
     let num_samples = 1000000;
 
-    let samples : Vec<_> = inference(imba())
+    let samples: Vec<_> = inference(imba())
         // Skip samples until we find a valid sample
         .skip_while(|s| s.log_probability.is_infinite())
         // Burn in the sampler to hopefully reach a stable point
         .skip(num_samples / 2)
         // Take our samples
         .take(num_samples)
-        .map(|s| if s.value {1.} else {0.})
+        .map(|s| if s.value { 1. } else { 0. })
         .collect();
 
     println!("{}", simple_bar_graph(2, 20, samples));
