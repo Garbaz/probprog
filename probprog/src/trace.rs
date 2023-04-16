@@ -6,68 +6,12 @@ use std::{
 
 use rand::{thread_rng, Rng};
 
-use crate::{
-    bernoulli,
-    distribution::{PrimitiveDistribution, Proposal, Sample},
-    normal, uniform,
-};
-
-#[derive(Debug, Clone)]
-pub enum ParametrizedValue {
-    Bernoulli { value: bool, p: f64 },
-    Uniform { value: f64, from: f64, to: f64 },
-    Normal { value: f64, mean: f64, std_dev: f64 },
-}
-
-impl fmt::Display for ParametrizedValue {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ParametrizedValue::Bernoulli { value, p } => {
-                write!(f, "bernoulli({}) => {}", p, value)
-            }
-            ParametrizedValue::Uniform { value, from, to } => {
-                write!(f, "uniform({},{}) => {}", from, to, value)
-            }
-            ParametrizedValue::Normal {
-                value,
-                mean,
-                std_dev,
-            } => {
-                write!(f, "normal({},{}) => {}", mean, std_dev, value)
-            }
-        }
-    }
-}
+use crate::distribution::{Sample, ParametrizedValue};
 
 #[derive(Debug, Clone)]
 pub struct TraceEntry {
     pub sample: Sample<ParametrizedValue>,
     pub touched: bool,
-}
-
-impl TraceEntry {
-    pub fn propose(&mut self) -> Proposal {
-        let proposal = match &self.sample.value {
-            ParametrizedValue::Bernoulli { value, p } => {
-                let dist = bernoulli(*p);
-                dist.propose(value)
-            }
-            ParametrizedValue::Uniform { value, from, to } => {
-                let dist = uniform(*from, *to);
-                dist.propose(value)
-            }
-            ParametrizedValue::Normal {
-                value,
-                mean,
-                std_dev,
-            } => {
-                let dist = normal(*mean, *std_dev);
-                dist.propose(value)
-            }
-        };
-        *self = proposal.sample.clone().into();
-        proposal
-    }
 }
 
 impl TraceEntry {
