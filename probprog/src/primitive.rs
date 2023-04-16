@@ -1,7 +1,4 @@
-use crate::{
-    distribution::{PrimitiveDistribution, Sample},
-    trace::ParametrizedValue,
-};
+use crate::distribution::{ParametrizedValue, PrimitiveDistribution, Sample};
 
 use rand::thread_rng;
 use rand_distr as rd;

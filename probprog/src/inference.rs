@@ -34,7 +34,7 @@ impl<_Tag, T: Clone, D: Distribution<_Tag, T>> Iterator
         if let Some(wiggler) = trace.random_variable() {
             // let a = wiggler.sample.log_probability;
 
-            let proposal = wiggler.propose();
+            let proposal = wiggler.sample.propose();
 
             // let b = wiggler.sample.log_probability;
 
