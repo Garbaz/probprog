@@ -29,7 +29,7 @@ impl<_Tag, T: Clone, D: Distribution<_Tag, T>> Iterator
         // We can save some memory & performance if needed by not cloning here
         // but instead adding some junk to `Trace`. For now I'll leave it like
         // this.
-        let mut trace = self.traced_sample.trace.clone();
+        let mut trace = self.traced_sample.trace_entry.clone();
 
         if let Some(wiggler) = trace.random_variable() {
             // let a = wiggler.sample.log_probability;
@@ -62,7 +62,7 @@ impl<_Tag, T: Clone, D: Distribution<_Tag, T>> Iterator
 
             if score > 0. || rand::random::<f64>().log2() < score {
                 self.traced_sample.sample = proposal_result;
-                self.traced_sample.trace = trace;
+                self.traced_sample.trace_entry = trace;
             }
         }
         Some(self.traced_sample.sample.clone())

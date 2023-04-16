@@ -5,7 +5,6 @@ pub mod distribution;
 pub mod inference;
 pub mod primitive;
 pub mod trace;
-pub mod trace3;
 pub mod visualization;
 
 use distribution::{Distribution, Sample};

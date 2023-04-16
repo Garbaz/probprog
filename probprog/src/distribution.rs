@@ -79,35 +79,33 @@ pub struct Proposal {
 #[derive(Debug, Clone)]
 pub struct TracedSample<T> {
     pub sample: Sample<T>,
-    pub trace: Trace,
+    pub trace : Trace,
 }
 
-impl<T: fmt::Display> fmt::Display for TracedSample<T> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "{}", self.sample)?;
-        writeln!(f, "{}", self.trace)
-    }
-}
+// impl<T: fmt::Display> fmt::Display for TracedSample<T> {
+//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+//         writeln!(f, "{}", self.sample)?;
+//         writeln!(f, "{}", self.trace)
+//     }
+// }
 
 pub trait Distribution<_Tag, T> {
     fn sample(&self) -> TracedSample<T>;
-    fn resample(&self, trace: &mut Trace) -> Sample<T>;
+    fn resample(&self, trace: Trace) -> TracedSample<T>;
 }
 
-pub trait FnProb<T>: Fn(&mut Trace) -> Sample<T> {}
+pub trait FnProb<T>: Fn(Trace) -> TracedSample<T> {}
 
-impl<T, F: Fn(&mut Trace) -> Sample<T>> FnProb<T> for F {}
+impl<T, F: Fn(Trace) -> TracedSample<T>> FnProb<T> for F {}
 
 pub enum _TagFnProb {}
 
 impl<T, F: FnProb<T>> Distribution<_TagFnProb, T> for F {
     fn sample(&self) -> TracedSample<T> {
-        let mut trace = Trace::new();
-        let sample = self(&mut trace);
-        TracedSample { sample, trace }
+        self.resample(Trace::new())
     }
 
-    fn resample(&self, trace: &mut Trace) -> Sample<T> {
+    fn resample(&self, trace: Trace) -> TracedSample<T> {
         self(trace)
     }
 }
@@ -148,46 +146,49 @@ impl<T: Clone, D: PrimitiveDistribution<T>>
     Distribution<_TagPrimitiveDistribution, T> for D
 {
     fn sample(&self) -> TracedSample<T> {
-        let mut trace = Trace::new();
-        let sample = self.resample(&mut trace);
-        TracedSample { sample, trace }
+        self.resample(Trace::new())
     }
 
-    fn resample(&self, trace: &mut Trace) -> Sample<T> {
-        if let Some(TraceEntry { sample, touched }) = trace.pop() {
-            if !touched {
-                if let Some(Sample {
-                    value,
-                    log_probability,
-                }) = self.deparametrize(sample.value)
-                {
-                    trace.push(
-                        Sample {
-                            value: self.parametrize(value.clone()),
-                            log_probability,
-                        }
-                        .into(),
-                    );
-                    return Sample {
-                        value,
-                        log_probability,
-                    };
-                }
-            }
-        }
-
-        let value = self.raw_sample();
-        let log_probability = self.log_probability(&value);
-        trace.push(
-            Sample {
-                value: self.parametrize(value.clone()),
-                log_probability,
-            }
-            .into(),
-        );
-        Sample {
-            value,
-            log_probability,
-        }
+    fn resample(&self, trace: Trace) -> TracedSample<T> {
     }
+
+
+
+    // fn resample(&self, trace: &mut Trace) -> Sample<T> {
+    //     if let Some(TraceEntry { sample, touched }) = trace.pop() {
+    //         if !touched {
+    //             if let Some(Sample {
+    //                 value,
+    //                 log_probability,
+    //             }) = self.deparametrize(sample.value)
+    //             {
+    //                 trace.push(
+    //                     Sample {
+    //                         value: self.parametrize(value.clone()),
+    //                         log_probability,
+    //                     }
+    //                     .into(),
+    //                 );
+    //                 return Sample {
+    //                     value,
+    //                     log_probability,
+    //                 };
+    //             }
+    //         }
+    //     }
+
+    //     let value = self.raw_sample();
+    //     let log_probability = self.log_probability(&value);
+    //     trace.push(
+    //         Sample {
+    //             value: self.parametrize(value.clone()),
+    //             log_probability,
+    //         }
+    //         .into(),
+    //     );
+    //     Sample {
+    //         value,
+    //         log_probability,
+    //     }
+    // }
 }
