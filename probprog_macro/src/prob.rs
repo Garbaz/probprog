@@ -24,10 +24,6 @@ pub fn prob(
 
     outer_closure(block, &func.sig.ident, &original_return_type);
 
-    // bump_returns(block);
-
-    // println!("{}", func.clone().into_token_stream().to_string());
-
     func.into_token_stream().into()
 }
 
@@ -158,26 +154,3 @@ fn tack_onto_loop_expr(loop_expr: TokenStream) -> TokenStream {
         }
     }
 }
-
-// fn bump_returns(mut input: Block) -> Block {
-//     BumpReturns.visit_block_mut(&mut input);
-//     input
-// }
-
-// struct BumpReturns;
-
-// impl VisitMut for BumpReturns {
-//     fn visit_expr_return_mut(&mut self, i: &mut ExprReturn) {
-//         let new_expr = if let Some(e) = &i.expr {
-//             quote! {
-//                 Ok(#e)
-//             }
-//         } else {
-//             quote! {
-//                 Ok(())
-//             }
-//         };
-
-//         i.expr = Some(parse2(new_expr).unwrap());
-//     }
-// }

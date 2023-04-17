@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::{bernoulli, normal, trace::Trace, uniform};
+use crate::{primitive::ParametrizedValue, trace::Trace};
 
 #[derive(Debug, Clone)]
 pub struct Sample<T> {
@@ -11,76 +11,6 @@ pub struct Sample<T> {
 impl<T: fmt::Display> fmt::Display for Sample<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{} : {:.3}", self.value, self.log_probability.exp2())
-    }
-}
-
-#[derive(Debug, Clone)]
-pub enum ParametrizedValue {
-    Bernoulli { value: bool, p: f64 },
-    Uniform { value: f64, from: f64, to: f64 },
-    Normal { value: f64, mean: f64, std_dev: f64 },
-}
-
-impl ParametrizedValue {
-    pub fn value_eq(&self, other: &Self) -> bool {
-        use ParametrizedValue::*;
-        match (self, other) {
-            (Bernoulli { value, .. }, Bernoulli { value: value_, .. }) => {
-                value == value_
-            }
-            (Uniform { value, .. }, Uniform { value: value_, .. }) => {
-                value == value_
-            }
-            (Normal { value, .. }, Normal { value: value_, .. }) => {
-                value == value_
-            }
-            _ => false,
-        }
-    }
-}
-
-impl Sample<ParametrizedValue> {
-    pub fn propose(&mut self) -> Proposal {
-        let proposal = match &self.value {
-            ParametrizedValue::Bernoulli { value, p } => {
-                let dist = bernoulli(*p);
-                dist.propose(value)
-            }
-            ParametrizedValue::Uniform { value, from, to } => {
-                let dist = uniform(*from, *to);
-                dist.propose(value)
-            }
-            ParametrizedValue::Normal {
-                value,
-                mean,
-                std_dev,
-            } => {
-                let dist = normal(*mean, *std_dev);
-                dist.propose(value)
-            }
-        };
-        *self = proposal.sample.clone().into();
-        proposal
-    }
-}
-
-impl fmt::Display for ParametrizedValue {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ParametrizedValue::Bernoulli { value, p } => {
-                write!(f, "bernoulli({}) => {}", p, value)
-            }
-            ParametrizedValue::Uniform { value, from, to } => {
-                write!(f, "uniform({},{}) => {}", from, to, value)
-            }
-            ParametrizedValue::Normal {
-                value,
-                mean,
-                std_dev,
-            } => {
-                write!(f, "normal({},{}) => {}", mean, std_dev, value)
-            }
-        }
     }
 }
 
@@ -98,13 +28,6 @@ pub struct TracedSample<T> {
     pub sample: Sample<T>,
     pub trace: Trace,
 }
-
-// impl<T: fmt::Display> fmt::Display for TracedSample<T> {
-//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-//         writeln!(f, "{}", self.sample)?;
-//         writeln!(f, "{}", self.trace)
-//     }
-// }
 
 pub trait Distribution<_Tag, T> {
     fn sample(&self) -> TracedSample<T>;
@@ -132,9 +55,9 @@ pub trait PrimitiveDistribution<T: Clone> {
 
     fn log_probability(&self, value: &T) -> f64;
 
-    /// The `forward_log_probability` is P(proposal|prior) and the
-    /// `reverse_log_probability` is P(prior|proposal). By default this is just
-    /// resampling from the distribution independent of the prior.
+    /// By default, this just draws a new sample from the distribution
+    /// independent of the prior, but an implementation can provide a more
+    /// informed `propose` if possible.
     fn propose(&self, prior: &T) -> Proposal {
         let value = self.raw_sample();
         let sample = Sample {
@@ -192,42 +115,4 @@ impl<T: Clone, D: PrimitiveDistribution<T>>
             trace: Trace::Primitive { sample: sample_pv },
         }
     }
-
-    // fn resample(&self, trace: &mut Trace) -> Sample<T> {
-    //     if let Some(TraceEntry { sample, touched }) = trace.pop() {
-    //         if !touched {
-    //             if let Some(Sample {
-    //                 value,
-    //                 log_probability,
-    //             }) = self.deparametrize(sample.value)
-    //             {
-    //                 trace.push(
-    //                     Sample {
-    //                         value: self.parametrize(value.clone()),
-    //                         log_probability,
-    //                     }
-    //                     .into(),
-    //                 );
-    //                 return Sample {
-    //                     value,
-    //                     log_probability,
-    //                 };
-    //             }
-    //         }
-    //     }
-
-    //     let value = self.raw_sample();
-    //     let log_probability = self.log_probability(&value);
-    //     trace.push(
-    //         Sample {
-    //             value: self.parametrize(value.clone()),
-    //             log_probability,
-    //         }
-    //         .into(),
-    //     );
-    //     Sample {
-    //         value,
-    //         log_probability,
-    //     }
-    // }
 }

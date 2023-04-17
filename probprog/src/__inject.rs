@@ -43,18 +43,13 @@ pub fn observe<T: Clone, D: PrimitiveDistribution<T>>(
     let log_probability = distribution.log_probability(value);
 
     *total_log_probability += log_probability;
-
-    // new_traces.push_back(Trace::Observe {
-    //     sample: Sample {
-    //         value: distribution.parametrize(value.to_owned()),
-    //         log_probability,
-    //     },
-    // })
 }
 
-// pub fn condition<T: Clone, D: PrimitiveDistribution<T>>(
-//     new_traces: &mut Traces,
-//     predicate: bool,
-// ) {
-//     new_traces.push_back(Trace::Observe { sample: () })
-// }
+pub fn condition<T: Clone, D: PrimitiveDistribution<T>>(
+    total_log_probability: &mut f64,
+    predicate: bool,
+) {
+    if predicate {
+        *total_log_probability = f64::NEG_INFINITY;
+    }
+}

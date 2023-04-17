@@ -28,9 +28,3 @@ pub fn inference<_Tag, T: Clone, D: Distribution<_Tag, T>>(
 ) -> impl Iterator<Item = T> {
     MetropolisHastings::new(distribution)
 }
-
-// pub fn draw_sample<_Tag, T: Clone, D: Distribution<_Tag, T>>(
-//     distribution: D,
-// ) -> TracedSample<T> {
-//     distribution.sample()
-// }

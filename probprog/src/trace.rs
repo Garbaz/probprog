@@ -2,38 +2,23 @@ use std::{collections::VecDeque, iter};
 
 use rand::{thread_rng, Rng};
 
-use crate::distribution::{ParametrizedValue, Sample};
+use crate::{distribution::Sample, primitive::ParametrizedValue};
 
-// use crate::distribution::{ParametrizedValue, Sample};
-
-// #[derive(Debug, Clone)]
-// pub struct TraceEntry {
-//     pub sample: Sample<ParametrizedValue>,
-//     pub touched: bool,
-// }
-
-// impl TraceEntry {
-//     pub fn new(sample : Sample<ParametrizedValue>) -> Self {
-//         Self {
-//             sample,
-//             touched: true,
-//         }
-//     }
-// }
-
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub enum Trace {
-    Primitive { sample: Sample<ParametrizedValue> },
-    // Observe { sample: Sample<ParametrizedValue> },
-    Function { name: String, subtraces: Traces },
-    Loop { iteration: usize, subtraces: Traces },
+    Primitive {
+        sample: Sample<ParametrizedValue>,
+    },
+    Function {
+        name: String,
+        subtraces: Traces,
+    },
+    Loop {
+        iteration: usize,
+        subtraces: Traces,
+    },
+    #[default]
     Empty,
-}
-
-impl Default for Trace {
-    fn default() -> Self {
-        Trace::Empty
-    }
 }
 
 pub type Traces = VecDeque<Trace>;
@@ -120,6 +105,11 @@ impl Trace {
         use Trace::*;
 
         let fl = |subtraces: &Traces, subtraces_: &Traces| {
+            // We go through all subtraces and other subtraces in order and
+            // accumulate the probability of each subtrace given the respective
+            // other subtrace. We extend the other subtraces by an infinite
+            // number of empty traces in case there are more subtraces than
+            // other subtraces.
             subtraces
                 .iter()
                 .zip(subtraces_.iter().chain(iter::repeat(&Empty)))
@@ -131,6 +121,8 @@ impl Trace {
             (Primitive { sample }, Primitive { sample: sample_ })
                 if sample.value.value_eq(&sample_.value) =>
             {
+                // If the a primitive with the same kind and value also appears
+                // in the other trace, then it's deterministic.
                 0.
             }
             (
@@ -150,13 +142,14 @@ impl Trace {
                     subtraces: subtraces_,
                 },
             ) if iteration == iteration_ => fl(subtraces, subtraces_),
-            (t, _) => t.primitives().fold(0., |acc, s| acc + s.log_probability),
+            (t, _) => {
+                // If the other trace doesn't match, then it's fully
+                // non-deterministic.
+                t.primitives().fold(0., |acc, s| acc + s.log_probability)
+            }
         }
     }
 }
-
-// #[derive(Debug, Clone)]
-// pub struct Traces(VecDeque<Trace>);
 
 pub trait PushBackAndMut<T> {
     fn push_back_and_mut(&mut self, value: T) -> &mut T;
@@ -168,136 +161,3 @@ impl<T> PushBackAndMut<T> for VecDeque<T> {
         self.back_mut().unwrap()
     }
 }
-
-// mod blorbo {
-//     use super::*;
-
-//     fn f(__trace: Trace) -> Trace {
-//         const __FUNCTION_NAME: &str = "f";
-
-//         let mut __ntrace = Trace::Function {
-//             name: __FUNCTION_NAME.to_string(),
-//             subtraces: Traces::new(),
-//         };
-
-//         let return_value = (|| {
-//             let mut __traces = __trace.function_subtraces(__FUNCTION_NAME);
-//             let __ntraces = __ntrace.subtraces().unwrap();
-//             // let __new_traces = match __
-
-//             let x = {
-//                 if let Some(Trace::Primitive { sample }) = __traces.pop_front()
-//                 {
-//                 }
-//             };
-
-//             // let mut c = 0;
-
-//             // loop {
-//             //     let b = {
-//             //         let sample = match __new_trace.pop_back() {
-//             //             // Ensure here that it's the right kind of sample &
-//             //             // update it
-//             //             Some(sample) if true => sample,
-//             //             _ => Sample {
-//             //                 value: DummyValue,
-//             //                 log_probability: 0.,
-//             //             },
-//             //         };
-
-//             //         __new_trace.push_variable(sample);
-
-//             //         // sample.value
-//             //         true
-//             //     };
-
-//             //     if b {
-//             //         return c;
-//             //     } else {
-//             //         c += 1;
-//             //     }
-//             // }
-//         })();
-//         __ntrace
-//     }
-// }
-
-// // impl Traces {
-// //     pub fn new() -> Self {
-// //         Self(VecDeque::new())
-// //     }
-
-// //     pub fn push_function<N: ToString>(
-// //         &mut self,
-// //         name: N,
-// //         subtraces: Traces,
-// //     ) -> &mut Traces {
-// //         let e = self.0.push_back_and_mut(Trace::Function {
-// //             name: name.to_string(),
-// //             subtraces,
-// //         });
-// //         if let Trace::Function {
-// //             subtraces: subtrace,
-// //             ..
-// //         } = e
-// //         {
-// //             subtrace
-// //         } else {
-// //             unreachable!()
-// //         }
-// //     }
-
-// //     pub fn push_loop(
-// //         &mut self,
-// //         iteration: usize,
-// //         subtraces: Traces,
-// //     ) -> &mut Traces {
-// //         let e = self.0.push_back_and_mut(Trace::Loop {
-// //             iteration,
-// //             subtraces,
-// //         });
-// //         if let Trace::Loop {
-// //             subtraces: subtrace,
-// //             ..
-// //         } = e
-// //         {
-// //             subtrace
-// //         } else {
-// //             unreachable!()
-// //         }
-// //     }
-
-// //     pub fn push_variable(&mut self, sample: Sample<ParametrizedValue>) {
-// //         self.0.push_back(Trace::Variable { sample })
-// //     }
-
-// //     pub fn pop_function<N: PartialEq<String>>(
-// //         &mut self,
-// //         name: N,
-// //     ) -> Option<Traces> {
-// //         match self.0.pop_front() {
-// //             Some(Trace::Function {
-// //                 name: name_,
-// //                 subtraces,
-// //             }) if name == name_ => Some(subtraces),
-// //             _ => None,
-// //         }
-// //     }
-
-// //     pub fn pop_loop(&mut self, iteration: usize) -> Option<Traces> {
-// //         match self.0.pop_front() {
-// //             Some(Trace::Loop {
-// //                 iteration: iteration_,
-// //                 subtraces,
-// //             }) if iteration == iteration_ => Some(subtraces),
-// //             _ => None,
-// //         }
-// //     }
-
-// //     pub fn pop_variable(&mut self) -> Option<Sample<ParametrizedValue>> {
-// //         match self.0.pop_front() {
-// //             Some(Trace::Variable { sample }) => Some(sample),
-// //             _ => None,
-// //         }
-// //     }
-// // }

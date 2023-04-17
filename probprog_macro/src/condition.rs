@@ -6,10 +6,9 @@ pub fn condition(input: pm::TokenStream) -> pm::TokenStream {
     let expr = parse_macro_input!(input as Expr);
 
     quote! {
-        ::probprog::__inject::sample(
-            __trace,
+        ::probprog::__inject::condition(
             &mut __log_probability,
-            #expr,
+            (#expr),
         )
     }
     .into()

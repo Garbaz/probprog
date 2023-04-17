@@ -22,7 +22,7 @@ pub fn simple_bar_graph<D: IntoIterator<Item = f64>>(
         }
         result += "\r\n";
     }
-    return result;
+    result
 }
 
 fn densities<D: IntoIterator<Item = f64>>(width: usize, data: D) -> Vec<usize> {
