@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::{trace::{Trace, TraceEntry}, bernoulli, uniform, normal};
+use crate::{bernoulli, normal, trace::Trace, uniform};
 
 #[derive(Debug, Clone)]
 pub struct Sample<T> {
@@ -19,6 +19,24 @@ pub enum ParametrizedValue {
     Bernoulli { value: bool, p: f64 },
     Uniform { value: f64, from: f64, to: f64 },
     Normal { value: f64, mean: f64, std_dev: f64 },
+}
+
+impl ParametrizedValue {
+    pub fn value_eq(&self, other: &Self) -> bool {
+        use ParametrizedValue::*;
+        match (self, other) {
+            (Bernoulli { value, .. }, Bernoulli { value: value_, .. }) => {
+                value == value_
+            }
+            (Uniform { value, .. }, Uniform { value: value_, .. }) => {
+                value == value_
+            }
+            (Normal { value, .. }, Normal { value: value_, .. }) => {
+                value == value_
+            }
+            _ => false,
+        }
+    }
 }
 
 impl Sample<ParametrizedValue> {
@@ -66,7 +84,6 @@ impl fmt::Display for ParametrizedValue {
     }
 }
 
-
 #[derive(Debug, Clone)]
 pub struct Proposal {
     pub sample: Sample<ParametrizedValue>,
@@ -79,7 +96,7 @@ pub struct Proposal {
 #[derive(Debug, Clone)]
 pub struct TracedSample<T> {
     pub sample: Sample<T>,
-    pub trace : Trace,
+    pub trace: Trace,
 }
 
 // impl<T: fmt::Display> fmt::Display for TracedSample<T> {
@@ -102,7 +119,7 @@ pub enum _TagFnProb {}
 
 impl<T, F: FnProb<T>> Distribution<_TagFnProb, T> for F {
     fn sample(&self) -> TracedSample<T> {
-        self.resample(Trace::new())
+        self.resample(Trace::Empty)
     }
 
     fn resample(&self, trace: Trace) -> TracedSample<T> {
@@ -135,9 +152,9 @@ pub trait PrimitiveDistribution<T: Clone> {
     fn parametrize(&self, value: T) -> ParametrizedValue;
     fn deparametrize(&self, value: ParametrizedValue) -> Option<Sample<T>>;
 
-    fn observe(&self, value: &T) -> f64 {
-        self.log_probability(value)
-    }
+    // fn observe(&self, value: &T) -> f64 {
+    //     self.log_probability(value)
+    // }
 }
 
 pub enum _TagPrimitiveDistribution {}
@@ -146,13 +163,35 @@ impl<T: Clone, D: PrimitiveDistribution<T>>
     Distribution<_TagPrimitiveDistribution, T> for D
 {
     fn sample(&self) -> TracedSample<T> {
-        self.resample(Trace::new())
+        self.resample(Trace::Empty)
     }
 
     fn resample(&self, trace: Trace) -> TracedSample<T> {
+        let value = if let Trace::Primitive { sample } = trace {
+            if let Some(Sample { value, .. }) = self.deparametrize(sample.value)
+            {
+                value
+            } else {
+                self.raw_sample()
+            }
+        } else {
+            self.raw_sample()
+        };
+
+        let log_probability = self.log_probability(&value);
+        let sample = Sample {
+            value: value.clone(),
+            log_probability,
+        };
+        let sample_pv = Sample {
+            value: self.parametrize(value),
+            log_probability,
+        };
+        TracedSample {
+            sample,
+            trace: Trace::Primitive { sample: sample_pv },
+        }
     }
-
-
 
     // fn resample(&self, trace: &mut Trace) -> Sample<T> {
     //     if let Some(TraceEntry { sample, touched }) = trace.pop() {

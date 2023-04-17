@@ -1,153 +1,165 @@
-use probprog::{
-    bernoulli, inference, o, prob, s, uniform, visualization::simple_bar_graph,
-};
-fn experiment0() {
-    #[prob]
-    fn forward(p: f64, n: usize) -> Vec<bool> {
-        let mut v = Vec::new();
-        for _ in 0..n {
-            v.push(s!(bernoulli(p)))
+use probprog::{bernoulli, inference, o, prob, s, uniform};
+
+#[prob]
+fn probfunc1(p: f64) -> usize {
+    let mut c = 0;
+    loop {
+        let x = s!(bernoulli(p));
+
+        if x {
+            c += 1;
+        } else {
+            return c;
         }
-        v
     }
-
-    #[prob]
-    fn backward(obs: Vec<bool>) -> f64 {
-        let p = s!(uniform(0., 1.));
-
-        for o in &obs {
-            o!(bernoulli(p), o);
-        }
-
-        p
-    }
-
-    let num_obs = 100;
-    let p = 0.1;
-    let obs = inference(forward(p, num_obs)).next().unwrap().value;
-
-    let num_samples = 10000;
-
-    let samples: Vec<_> = inference(backward(obs))
-        // Skip samples until we find a valid sample
-        .skip_while(|s| s.log_probability.is_infinite())
-        // Burn in the sampler to hopefully reach a stable point
-        .skip(num_samples / 2)
-        // Take our samples
-        .take(num_samples)
-        .map(|s| s.value)
-        .collect();
-
-    let avg: f64 = samples.iter().map(|&x| x / (num_samples as f64)).sum();
-    println!("Coin weight:");
-    println!("  real: {}, inferred: {}", p, avg);
-
-    println!("{}", simple_bar_graph(60, 20, samples));
 }
 
-fn experiment1() {
-    #[prob]
-    fn imba() -> bool {
-        if s!(bernoulli(0.5)) {
-            true
-        } else {
-            for _ in 0..10 {
-                s!(bernoulli(0.1729));
-            }
-            false
-        }
+#[prob]
+fn probfunc2(obs: Vec<bool>) -> f64 {
+    let p = s!(uniform(0., 1.));
+
+    for o in &obs {
+        o!(bernoulli(p), o);
     }
 
-    let num_samples = 1000000;
-
-    let samples: Vec<_> = inference(imba())
-        // Skip samples until we find a valid sample
-        .skip_while(|s| s.log_probability.is_infinite())
-        // Burn in the sampler to hopefully reach a stable point
-        .skip(num_samples / 2)
-        // Take our samples
-        .take(num_samples)
-        .map(|s| if s.value { 1. } else { 0. })
-        .collect();
-
-    println!("{}", simple_bar_graph(2, 20, samples));
+    p
 }
 
 fn main() {
-    experiment0();
-    // experiment1();
+    let n = 1000;
+    let burn_in = n / 2;
 
-    // const N: usize = 4;
-    // let burn_in = N / 2;
-    // let gen = metropolis_hastings(example3(vec![
-    //     true, false, true, false, true, false,
-    // ]));
+    let f = probfunc2(vec![true, false, true, true]);
 
-    // let avg: f64 = gen
-    //     .skip(burn_in)
-    //     .take(N)
-    //     .map(|s| (s.value as f64) / (N as f64))
-    //     .sum();
-    // println!("{}", avg);
+    let samples: Vec<_> = inference(f).skip(burn_in).take(n).collect();
+    let avg: f64 = samples.iter().map(|x| (*x as f64) / (n as f64)).sum();
+    println!("{}", avg);
 
-    // let gen = mh(t4(0.33));
-    // const N: usize = 1000;
-    // let avg: f64 = gen
-    //     .skip(100)
-    //     .take(N)
-    //     .map(|s| (s.value as f64) / (N as f64))
-    //     .sum();
-    // println!("{}", avg);
+    // println!(
+    //     "{:#?}",
+    //     f(Trace::Function {
+    //         name: "probfunc1".to_string(),
+    //         subtraces: Traces::from(vec![
+    //             Trace::Loop {
+    //                 iteration: 0,
+    //                 subtraces: Traces::from(vec![Trace::Sample {
+    //                     sample: Sample {
+    //                         value: ParametrizedValue::Bernoulli {
+    //                             value: true,
+    //                             p: 0.25
+    //                         },
+    //                         log_probability: -2.0,
+    //                     }
+    //                 }])
+    //             },
+    //             Trace::Loop {
+    //                 iteration: 1,
+    //                 subtraces: Traces::from(vec![Trace::Sample {
+    //                     sample: Sample {
+    //                         value: ParametrizedValue::Bernoulli {
+    //                             value: true,
+    //                             p: 0.25
+    //                         },
+    //                         log_probability: -2.0,
+    //                     }
+    //                 }])
+    //             }
+    //         ])
+    //     })
+    // );
 }
 
-// pub fn t4(p: f64) -> impl FnProb<usize> {
-//     move |__trace: &mut Trace| -> Sample<usize> {
-//         let mut __log_probability = 0.;
-//         let value = (|| {
-//             let _q = {
-//                 let s = uniform(-1., 1.).resample(__trace);
-//                 __log_probability += s.log_probability;
-//                 s.value
-//             };
+// fn probfunc1(p: f64) -> impl FnProb<usize> {
+//     const __FUNCTION_NAME: &str = "probfunc1";
+//     move |__old_trace: Trace| -> TracedSample<usize> {
+//         let mut __new_trace = Trace::Function {
+//             name: __FUNCTION_NAME.to_string(),
+//             subtraces: Traces::new(),
+//         };
+
+//         let mut __total_log_probability = 0.;
+
+//         let return_value = (|| -> usize {
+// let mut __old_traces =
+//     __old_trace.function_subtraces(__FUNCTION_NAME);
+// let __new_traces = __new_trace.subtraces().unwrap();
 
 //             let mut c = 0;
 
 //             {
-//                 let mut __loop_counter: usize = 0;
+//                 let mut __loop_counter = 0;
 //                 loop {
-//                     let __trace =
-//                         __trace.descend(TraceDirectory::Loop(__loop_counter));
+//                     let (mut __old_traces, __new_traces) =
+//                         __inject::loop_descend(
+//                             &mut __old_traces,
+//                             __new_traces,
+//                             __loop_counter,
+//                         );
 
-//                     {
-//                         let x = {
-//                             let s = bernoulli(p).resample(__trace);
-//                             __log_probability += s.log_probability;
-//                             s.value
-//                         };
+//                     let x = __inject::sample(
+//                         &mut __old_traces,
+//                         __new_traces,
+//                         &mut __total_log_probability,
+//                         bernoulli(p),
+//                     );
 
-//                         if x {
-//                             // return c;
-//                             break;
-//                         } else {
-//                             c += 1;
-//                         }
+//                     if x {
+//                         c += 1;
+//                     } else {
+//                         __inject::sample(
+//                             &mut __old_traces,
+//                             __new_traces,
+//                             &mut __total_log_probability,
+//                             probfunc2(),
+//                         );
+//                         __inject::sample(
+//                             &mut __old_traces,
+//                             __new_traces,
+//                             &mut __total_log_probability,
+//                             probfunc2(),
+//                         );
+//                         __inject::sample(
+//                             &mut __old_traces,
+//                             __new_traces,
+//                             &mut __total_log_probability,
+//                             probfunc2(),
+//                         );
+//                         return c;
 //                     }
 
 //                     __loop_counter += 1;
 //                 }
 //             }
-
-//             let _p = {
-//                 let s = uniform(-2., 2.).resample(__trace);
-//                 __log_probability += s.log_probability;
-//                 s.value
-//             };
-
-//             c
 //         })();
-//         Sample {
-//             value,
-//             log_probability: __log_probability,
+
+//         TracedSample {
+//             sample: Sample {
+//                 value: return_value,
+//                 log_probability: __total_log_probability,
+//             },
+//             trace: __new_trace,
+//         }
+//     }
+// }
+
+// fn probfunc2() -> impl FnProb<()> {
+//     const __FUNCTION_NAME: &str = "probfunc2";
+//     move |__old_trace: Trace| -> TracedSample<()> {
+//         let mut __new_trace = Trace::Function {
+//             name: __FUNCTION_NAME.to_string(),
+//             subtraces: Traces::new(),
+//         };
+
+//         let mut __total_log_probability = 0.;
+
+//         let return_value = (|| {})();
+
+//         TracedSample {
+//             sample: Sample {
+//                 value: return_value,
+//                 log_probability: __total_log_probability,
+//             },
+//             trace: __new_trace,
 //         }
 //     }
 // }

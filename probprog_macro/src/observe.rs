@@ -23,9 +23,9 @@ pub fn observe(input: pm::TokenStream) -> pm::TokenStream {
         parse_macro_input!(input as ObserveArgs);
 
     quote! {
-        ::probprog::__internal::observe(
-            &mut __log_probability,
-            #expr_distribution,
+        ::probprog::__inject::observe(
+            &mut __total_log_probability,
+            (#expr_distribution),
             &(#expr_value),
         )
     }

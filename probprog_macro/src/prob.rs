@@ -20,9 +20,9 @@ pub fn prob(
 
     loop_descend(block);
 
-    sample_wrap(block, &func.sig.ident, &original_return_type);
+    inner_closure(block, &original_return_type);
 
-    closure_wrap(block, &original_return_type);
+    outer_closure(block, &func.sig.ident, &original_return_type);
 
     // bump_returns(block);
 
@@ -55,16 +55,7 @@ fn return_type(func_output: &mut ReturnType) -> Type {
 
 /// Construct the new function body. If it before was `{17.29}`, it now is
 /// `{move |trace : &mut Trace| -> Sample<f64> {17.29})}`.
-fn closure_wrap(block: &mut Block, original_return_type: &Type) {
-    *block = parse2(quote! {
-        {
-            move |__trace: &mut ::probprog::trace::Trace| -> ::probprog::distribution::Sample<#original_return_type>
-                #block
-        }
-    }).unwrap()
-}
-
-fn sample_wrap(
+fn outer_closure(
     block: &mut Block,
     funcname: &Ident,
     original_return_type: &Type,
@@ -72,14 +63,37 @@ fn sample_wrap(
     let funcname = funcname.to_string();
     *block = parse2(quote! {
         {
-            let __trace = __trace.descend(::probprog::trace::TraceDirectory::Function(#funcname.to_string()));
-            let mut __log_probability = 0.;
-            let value = (|| -> #original_return_type
+            const __FUNCTION_NAME: &str = #funcname;
+            move |__old_trace: ::probprog::trace::Trace| -> ::probprog::distribution::TracedSample<#original_return_type>
+                #block
+        }
+    }).unwrap()
+}
+
+fn inner_closure(block: &mut Block, original_return_type: &Type) {
+    *block = parse2(quote! {
+        {
+            let mut __new_trace = ::probprog::trace::Trace::Function {
+                name: __FUNCTION_NAME.to_string(),
+                subtraces: ::probprog::trace::Traces::new(),
+            };
+
+            let mut __total_log_probability = 0.;
+
+            let mut __old_traces =
+                __old_trace.function_subtraces(__FUNCTION_NAME);
+            let __new_traces = __new_trace.subtraces().unwrap();
+
+            let return_value = (|| -> #original_return_type
                 #block
             )();
-            ::probprog::distribution::Sample {
-                value,
-                log_probability: __log_probability,
+
+            ::probprog::distribution::TracedSample {
+                sample: ::probprog::distribution::Sample {
+                    value: return_value,
+                    log_probability: __total_log_probability,
+                },
+                trace: __new_trace,
             }
         }
     })
@@ -122,10 +136,15 @@ fn tack_onto_loop_body(block: &Block) -> Block {
     // We should be able to just unwrap here without a chance for error.
     parse2(quote! {
         {
-            let __trace = __trace.descend(::probprog::trace::TraceDirectory::Loop(__loop_counter));
-            let value = #block;
+            let (mut __old_traces, __new_traces) =
+                        ::probprog::__inject::loop_descend(
+                            &mut __old_traces,
+                            __new_traces,
+                            __loop_counter,
+                        );
+            let return_value = #block;
             __loop_counter += 1;
-            value
+            return_value
         }
     })
     .unwrap()
@@ -134,7 +153,7 @@ fn tack_onto_loop_body(block: &Block) -> Block {
 fn tack_onto_loop_expr(loop_expr: TokenStream) -> TokenStream {
     quote! {
         {
-            let mut __loop_counter: usize = 0;
+            let mut __loop_counter = 0;
             #loop_expr
         }
     }
