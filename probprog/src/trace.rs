@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, iter};
+use std::{collections::VecDeque, fmt, iter};
 
 use rand::{thread_rng, Rng};
 
@@ -148,6 +148,41 @@ impl Trace {
                 t.primitives().fold(0., |acc, s| acc + s.log_probability)
             }
         }
+    }
+}
+
+impl fmt::Display for Trace {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let fl = |f: &mut fmt::Formatter<'_>, subtraces: &Traces| {
+            let sts = subtraces.iter().map(|t| format!("{}", t));
+            for st in sts {
+                let mut stl = st.lines();
+                stl.next().and_then(|st| writeln!(f, "+- {}", st).err());
+                for l in stl {
+                    writeln!(f, "|  {}", l)?;
+                }
+            }
+            Ok(())
+        };
+
+        match self {
+            Trace::Primitive { sample } => {
+                writeln!(f, "{}", sample)?;
+            }
+            Trace::Function { name, subtraces } => {
+                writeln!(f, "{}", name)?;
+                fl(f, subtraces)?;
+            }
+            Trace::Loop {
+                iteration,
+                subtraces,
+            } => {
+                writeln!(f, "@{}", iteration)?;
+                fl(f, subtraces)?;
+            }
+            Trace::Empty => {}
+        }
+        Ok(())
     }
 }
 

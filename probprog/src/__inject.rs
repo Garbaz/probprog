@@ -45,11 +45,11 @@ pub fn observe<T: Clone, D: PrimitiveDistribution<T>>(
     *total_log_probability += log_probability;
 }
 
-pub fn condition<T: Clone, D: PrimitiveDistribution<T>>(
+pub fn condition(
     total_log_probability: &mut f64,
     predicate: bool,
 ) {
-    if predicate {
+    if !predicate {
         *total_log_probability = f64::NEG_INFINITY;
     }
 }

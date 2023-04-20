@@ -2,6 +2,17 @@ use std::marker::PhantomData;
 
 use crate::distribution::{Distribution, TracedSample};
 
+fn find_starting_point<_Tag, T, D: Distribution<_Tag, T>>(
+    distribution: &D,
+) -> TracedSample<T> {
+    loop {
+        let ts = distribution.sample();
+        if ts.sample.log_probability.is_finite() {
+            break ts;
+        }
+    }
+}
+
 pub struct MetropolisHastings<_Tag, T, D: Distribution<_Tag, T>> {
     distribution: D,
     traced_sample: TracedSample<T>,
@@ -11,7 +22,7 @@ pub struct MetropolisHastings<_Tag, T, D: Distribution<_Tag, T>> {
 impl<_Tag, T, D: Distribution<_Tag, T>> MetropolisHastings<_Tag, T, D> {
     pub fn new(distribution: D) -> Self {
         Self {
-            traced_sample: distribution.sample(),
+            traced_sample: find_starting_point(&distribution),
             distribution,
             _phantom: PhantomData,
         }

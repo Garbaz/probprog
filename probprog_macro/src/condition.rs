@@ -7,7 +7,7 @@ pub fn condition(input: pm::TokenStream) -> pm::TokenStream {
 
     quote! {
         ::probprog::__inject::condition(
-            &mut __log_probability,
+            &mut __total_log_probability,
             (#expr),
         )
     }

@@ -26,10 +26,12 @@ fn probfunc2(obs: Vec<bool>) -> f64 {
 }
 
 fn main() {
-    let n = 1000;
+    let n = 100000;
     let burn_in = n / 2;
 
-    let f = probfunc2(vec![true, false, true, true]);
+    let obs = vec![true, false, true, true, false, true, false];
+
+    let f = probfunc2(obs);
 
     let samples: Vec<_> = inference(f).skip(burn_in).take(n).collect();
     let avg: f64 = samples.iter().map(|x| *x / (n as f64)).sum();
